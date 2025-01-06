@@ -54,3 +54,9 @@ parser.add_argument("--text_encoder_batch_size", help="batch size of the text en
 parser.add_argument('--threshold', type=float, help="optional threshold")
 parser.add_argument('--threshold_trials', type=int, default=50, help="how many threshold values to try")
 parser.add_argument("--phase", help="evaluate on open world setup", default= False)
+
+# Add missing parameters
+parser.add_argument("--obj", help="Weight for object loss", type=float, default=0.1)
+parser.add_argument("--att", help="Weight for attention loss", type=float, default=0.01)
+parser.add_argument("--attr_ours", help="Weight for custom attribute loss", type=float, default=0.005)
+parser.add_argument("--sp_w", help="Weight for SP loss", type=float, default=0.1)

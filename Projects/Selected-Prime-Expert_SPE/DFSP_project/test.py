@@ -1291,8 +1291,10 @@ def construct_uce_table(model, train_dataset,train_dataset_CL,  config):
     attr_exp3 = torch.Tensor()    
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    attr_exp3 = torch.Tensor().to(all_logits.device)  # 初始化時設置設備
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)  # 確保索引在正確設備
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     
     probs_expert1 ,probs_expert2,probs_expert3 = S_attr_exp1,S_pair_exp2,S_attr_exp3

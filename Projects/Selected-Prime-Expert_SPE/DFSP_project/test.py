@@ -761,9 +761,10 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
     # 並將對應的位置將S_all_logits>S_logit_attr_ours
-    attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    attr_exp3 = torch.Tensor().to(all_logits.device)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     if config.MCDP:
         S_pair_exp2 = F.softmax(all_logits, dim=1)

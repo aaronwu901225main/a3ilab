@@ -1173,8 +1173,9 @@ def test__yfs(
     
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]    
     attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     #計算ep1 attr UCE
     uce_and_bin_values_all_logits_attr = [compute_uce(S_attr_exp1, all_attr_gt)]

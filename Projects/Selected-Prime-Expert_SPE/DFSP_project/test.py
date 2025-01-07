@@ -1384,7 +1384,7 @@ if __name__ == "__main__":
 
     
     model = DFSP(config, attributes=attributes, classes=classes, offset=offset).cuda()
-    model.load_state_dict(torch.load(config.load_model), weights_only=True)
+    model.load_state_dict(torch.load(config.load_model))
 
 
 

@@ -60,3 +60,6 @@ parser.add_argument("--obj", help="Weight for object loss", type=float, default=
 parser.add_argument("--att", help="Weight for attention loss", type=float, default=0.01)
 parser.add_argument("--attr_ours", help="Weight for custom attribute loss", type=float, default=0.005)
 parser.add_argument("--sp_w", help="Weight for SP loss", type=float, default=0.1)
+
+# 新增 `--train_look_up_table` 參數
+parser.add_argument("--train_look_up_table", help="Enable or disable training look-up table", type=bool, default=False)

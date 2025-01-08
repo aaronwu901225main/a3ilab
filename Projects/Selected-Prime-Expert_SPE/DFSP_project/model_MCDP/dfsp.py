@@ -12,7 +12,6 @@ from clip_modules.model_loader import load
 from model_MCDP.common import *
 import numpy as np
 
-
 class DFSP(nn.Module):
     def __init__(self, config, attributes, classes, offset):
         super().__init__()
@@ -22,10 +21,7 @@ class DFSP(nn.Module):
         self.attributes = attributes
         self.classes = classes
         self.attr_dropout = nn.Dropout(config.attr_dropout)
-        
-        # 根據 config.dropout1 動態設置 Dropout
-        self.dropout = nn.Dropout(p=config.dropout1)  # 使用 config 中的 dropout1
-        
+        self.dropout = nn.Dropout(p=0.3)  ##新增Monte Carlo Dropout
         self.token_ids, self.soft_att_obj, ctx_vectors = self.construct_soft_prompt()
         self.offset = offset
         self.enable_pos_emb = True
@@ -36,14 +32,13 @@ class DFSP(nn.Module):
             self.dtype = dtype
         self.text_encoder = CustomTextEncoder(self.clip, self.dtype)
         for p in self.parameters():
-            p.requires_grad = False
+            p.requires_grad=False
 
         self.soft_att_obj = nn.Parameter(self.soft_att_obj)
         self.soft_prompt = nn.Parameter(ctx_vectors).cuda()
         self.fusion = FusionTextImageBlock(config.width_img, config.width_txt, len(self.attributes), len(self.classes), config.SA_K, context_length=self.config.context_length, fusion=self.config.fusion)
         self.weight = config.res_w
         self.log_idx = True
-
     def construct_soft_prompt(self):
         token_ids = clip.tokenize("a photo of x x",
                               context_length=self.config.context_length).cuda()

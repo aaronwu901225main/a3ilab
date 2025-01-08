@@ -12,6 +12,8 @@ from clip_modules.model_loader import load
 from model_MCDP.common import *
 import numpy as np
 
+
+
 class DFSP(nn.Module):
     def __init__(self, config, attributes, classes, offset):
         super().__init__()

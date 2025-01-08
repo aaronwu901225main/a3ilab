@@ -11,7 +11,7 @@ from collections import OrderedDict
 from clip_modules.model_loader import load
 from model_MCDP.common import *
 import numpy as np
-
+from common import dfsp
 
 
 class DFSP(nn.Module):

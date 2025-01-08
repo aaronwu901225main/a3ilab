@@ -14,7 +14,7 @@ from scipy.stats import hmean
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 import cv2
-from typing import List, Optional
+
 from utils import *
 from loss import loss_calu
 from parameters import parser, YML_PATH
@@ -30,8 +30,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
 from collections import Counter
 from typing import List
-
-import csv
 cudnn.benchmark = True
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -513,8 +511,7 @@ def plot_dot_UCE_diagram(uce_value, bin_uncertainties, bin_errors, model_index, 
     Path(config.save_path + '/plt/'+str(len(test_dataset.pairs))).mkdir(parents=True, exist_ok=True)
     plt.savefig(config.save_path + '/plt/'+str(len(test_dataset.pairs))+'/'+test_dataset.phase+'_'+"UCE_model_{}.png".format(model_index + 1))
 ### 5/1新增
-def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs ,test_dataset,val_uce_list_ep1,val_uce_list_ep2,weight_ep1,weight_ep2,n_bins=10):
-
+def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs ,test_dataset,val_uce_list_ep1,val_uce_list_ep2,n_bins=10):
     
 #     uce_expert1, bin_uncertainties_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_uce(probs_expert1, targets, n_bins)
 #     uce_expert2, bin_uncertainties_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_uce(probs_expert2, targets_pairs, n_bins)
@@ -532,11 +529,6 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     error_rates_expert1 = find_error_rates(uncertainties_expert1, bin_uncertainties_expert1, bin_errors_expert1)
     error_rates_expert2 = find_error_rates(uncertainties_expert2, bin_uncertainties_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
-    
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    
-    
     chosen_expert = (error_rates_expert1 < error_rates_expert2)
 
     # Get the predictions from both experts
@@ -600,9 +592,9 @@ def accuracy(y_true, y_pred):
     accuracy = correct_predictions.item() / y_true.size(0)
 
     return accuracy
-def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val_uce_list_ep1,val_uce_list_ep2,weight_ep1,weight_ep2, n_bins=10):
+def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val_uce_list_ep1,val_uce_list_ep2, n_bins=10):
     # Compute UCE and bin values for both experts
-
+    
 #     uce_expert1, bin_uncertainties_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_uce(probs_expert1, targets, n_bins)
 #     uce_expert2, bin_uncertainties_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_uce(probs_expert2, targets, n_bins)
 
@@ -618,10 +610,6 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     error_rates_expert1 = find_error_rates(uncertainties_expert1, bin_uncertainties_expert1, bin_errors_expert1)
     error_rates_expert2 = find_error_rates(uncertainties_expert2, bin_uncertainties_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
-    
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    
     chosen_expert = (error_rates_expert1 < error_rates_expert2)
 
     # Get the predictions from both experts
@@ -634,8 +622,8 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     return final_predictions
 
 
-def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, targets,targets_pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,weight_ep1,weight_ep2,weight_ep3, n_bins=10):
-
+def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, targets,targets_pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3, n_bins=10):
+    
     
 #     uce_expert1, bin_uncertainties_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_uce(probs_expert1, targets, n_bins)
 #     uce_expert2, bin_uncertainties_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_uce(probs_expert2, targets_pairs, n_bins)
@@ -660,11 +648,7 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     error_rates_expert2 = find_error_rates(uncertainties_expert2, bin_uncertainties_expert2, bin_errors_expert2)
     error_rates_expert3 = find_error_rates(uncertainties_expert3, bin_uncertainties_expert3, bin_errors_expert3)
     # Choose the expert with lower error rate for each sample
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    error_rates_expert3 = (error_rates_expert3/weight_ep3)
-    
-    
+
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
     preds_expert2_pairs = torch.argmax(probs_expert2, dim=1)
@@ -767,54 +751,6 @@ def product_of_experts(predictions):
     
     return product
 
-def weighted_voting_(prob_expert1: List[float], prob_expert2: List[float], weights: List[float], default_expert: int) -> torch.Tensor:
-    assert default_expert in [1, 2], "Default expert must be either 1 or 2"
-
-    final_probs = []
-    for p1, p2 in zip(prob_expert1, prob_expert2):
-        weighted_probs = Counter()
-        for prob, weight in zip([p1, p2], weights):
-            weighted_probs[prob] += weight
-
-        max_prob_count = max(weighted_probs.values())
-        most_common = [k for k, v in weighted_probs.items() if v == max_prob_count]
-
-        if len(most_common) > 1:
-            if default_expert == 1:
-                final_probs.append(p1)
-            else:  # default_expert == 2
-                final_probs.append(p2)
-        else:
-            final_probs.append(most_common[0])
-
-    final_probs = torch.tensor(final_probs, dtype=torch.float32)  # or your desired data type
-    return final_probs
-
-def voting_(prob_expert1: Optional[List[float]], prob_expert2: Optional[List[float]], default_expert: int) -> torch.Tensor:
-    assert default_expert in [1, 2], "Default expert must be either 1 or 2"
-
-    final_probs = []
-    for p1, p2 in zip(prob_expert1, prob_expert2):
-        prob_counts = Counter([p for p in [p1, p2] if p is not None])
-        if not prob_counts:  # All predictions are None
-            final_probs.append(None)
-            continue
-
-        max_prob_count = max(prob_counts.values())
-        most_common = [k for k, v in prob_counts.items() if v == max_prob_count]
-
-        if len(most_common) > 1:
-            if default_expert == 1:
-                final_probs.append(p1)
-            else:  # default_expert == 2
-                final_probs.append(p2)
-        else:
-            final_probs.append(most_common[0])
-
-    final_probs = torch.tensor(final_probs, dtype=torch.float32)  # or your desired data type
-    return final_probs
-
-
 
 def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,pairs,yfs,stats,test_dataset,config):
 
@@ -822,17 +758,13 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     global val_uce_list_ep2
     global val_uce_list_ep3
     global use_fs
-    global val_acc_ep1
-    global val_acc_ep2
-    global val_acc_ep3
-    global val_uce_list_ep2_att
-    
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
     # 並將對應的位置將S_all_logits>S_logit_attr_ours
-    attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    attr_exp3 = torch.Tensor().to(all_logits.device)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     if config.MCDP:
         S_pair_exp2 = F.softmax(all_logits, dim=1)
@@ -898,31 +830,22 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
         val_uce_list_ep3.append(bin_variances_ep3)
         print("use_val_fs")
         use_fs = False
-    
-    weight_ep1 = 1.0
-    weight_ep2 = 1.0
-    weight_ep3 = 1.0
-    if config.weighted:
-        if test_dataset.phase == 'test':
-            print("using test weighted voting")
-            weight_ep1,weight_ep2,weight_ep3=val_acc_ep1[0],val_acc_ep2[1],val_acc_ep3[1]
-            print(weight_ep1,weight_ep2,weight_ep3)
-            
-        #在test時載入val acc的數值 06/21
+
+
     
     
     #計算table準確度
-    table_pred_ep12 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2,weight_ep1,weight_ep2)
+    table_pred_ep12 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2)
     table_acc_ep12 = accuracy(table_pred_ep12,all_attr_gt)
 
-    table_expert_ep13 = choose_best_expert_ex(S_attr_exp1, S_attr_exp3, all_attr_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep3,weight_ep1,weight_ep3)
+    table_expert_ep13 = choose_best_expert_ex(S_attr_exp1, S_attr_exp3, all_attr_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep3)
     table_acc_ep13 = accuracy(table_expert_ep13,all_attr_gt)
     
-    table_pred_ep23 = choose_best_expert(S_attr_exp3, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep2,val_uce_list_ep3,weight_ep2,weight_ep3)
+    table_pred_ep23 = choose_best_expert(S_attr_exp3, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep2,val_uce_list_ep3)
     table_acc_ep23 = accuracy(table_pred_ep23,all_attr_gt)
     
     # 計算3位專家綜合準確度
-    tabel_pred_ep123 = choose_best_three_expert(S_attr_exp1,S_pair_exp2,S_attr_exp3,pairs,all_attr_gt,all_pair_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,weight_ep1,weight_ep2,weight_ep3)
+    tabel_pred_ep123 = choose_best_three_expert(S_attr_exp1,S_pair_exp2,S_attr_exp3,pairs,all_attr_gt,all_pair_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3)
     tabel_acc_ep123 = accuracy(tabel_pred_ep123,all_attr_gt)
     
     #計算單一專家準確度
@@ -933,20 +856,6 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     preds_expert2_pairs = torch.argmax(S_pair_exp2, dim=1)
     preds_expert2 = pairs[preds_expert2_pairs][:, 0].cpu()    
     expert2_acc=accuracy(preds_expert2,all_attr_gt)
-    
-    ###20230912更改 新增att_exp2
-
-    a = len(torch.unique(pairs[:, 0])) # 屬性的數量
-    b = len(torch.unique(pairs[:, 1])) # 物體的數量
-
-    S_attr_exp2 = torch.zeros((S_pair_exp2.shape[0], a))
-
-    for i in range(a):
-        start_idx = i * b
-        end_idx = start_idx + b
-        S_attr_exp2[:, i], _ = torch.max(S_pair_exp2[:, start_idx:end_idx], dim=1)
-    ###20230912更改 新增att_exp2
-    
 
     preds_expert3 = torch.argmax(S_attr_exp3, dim=1)
     expert3_acc= accuracy(preds_expert3,all_attr_gt)
@@ -972,128 +881,46 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     FDR_expert3, FOR_expert3 = calculate_weighted_multiclass_fdr_for(preds_expert3.cpu().numpy(), all_attr_gt.cpu().numpy())
     
     ### 消融實驗
+    #簡單投票，都不一樣選2
+    simple_voting_pred =voting(preds_expert1, preds_expert2, preds_expert3,2)
+    simple_voting_acc =accuracy(simple_voting_pred,all_attr_gt)
+    #加權投票，都不一樣選2
+    weighted_voting_pred =weighted_voting(preds_expert1, preds_expert2, preds_expert3,[0.3,0.4,0.3],2)
+    weighted_voting_acc =accuracy(weighted_voting_pred,all_attr_gt)
     #Product of Experts 綜合ep13
-    POE_probs_ = torch.stack([S_attr_exp1,S_attr_exp2, S_attr_exp3])
+    POE_probs_ = torch.stack([S_attr_exp1, S_attr_exp3])
     POE_probs = product_of_experts(POE_probs_)
     POE_pred = np.argmax(POE_probs, axis=1)
-    POE_acc_123 =accuracy(POE_pred,all_attr_gt)
+    POE_acc =accuracy(POE_pred,all_attr_gt)
     
-    SOE_probs = (S_attr_exp1+S_attr_exp2+ S_attr_exp3)/3
-    SOE_pred = np.argmax(SOE_probs, axis=1)
-    SOE_acc_123 =accuracy(SOE_pred,all_attr_gt)
+    stats['attr_acc_simple_voting_acc'+yfs] = simple_voting_acc
+    stats['attr_acc_weighted_voting_acc'+yfs] = weighted_voting_acc
+    stats['attr_acc_POE_acc'+yfs] = POE_acc
     
-    ###20230912更改 新增SOE POE12 13 23    
-    def calculate_SOE_POE(ep1, ep2, ep3=None):
-        if ep3 is not None:
-            SOE_probs = (ep1 + ep2 + ep3) / 3
-            POE_probs = product_of_experts(torch.stack([ep1, ep2, ep3]))
-        else:
-            SOE_probs = (ep1 + ep2) / 2
-            POE_probs = product_of_experts(torch.stack([ep1, ep2]))
-
-        SOE_pred = torch.argmax(SOE_probs, dim=1)
-        POE_pred = torch.argmax(POE_probs, dim=1)
-
-        return SOE_pred, POE_pred
-    SOE_pred_12, POE_pred_12 = calculate_SOE_POE(S_attr_exp1, S_attr_exp2)
-    SOE_pred_23, POE_pred_23 = calculate_SOE_POE(S_attr_exp2, S_attr_exp3)
-    SOE_pred_13, POE_pred_13 = calculate_SOE_POE(S_attr_exp1, S_attr_exp3)
-
-    SOE_acc_12 = accuracy(SOE_pred_12, all_attr_gt)
-    SOE_acc_23 = accuracy(SOE_pred_23, all_attr_gt)
-    SOE_acc_13 = accuracy(SOE_pred_13, all_attr_gt)
-
-    POE_acc_12 = accuracy(POE_pred_12, all_attr_gt)
-    POE_acc_23 = accuracy(POE_pred_23, all_attr_gt)
-    POE_acc_13 = accuracy(POE_pred_13, all_attr_gt)
-    
-    ###20230912更改 新增簡單投票
-    
-    simple_voting_pred_12 = voting_(preds_expert1, preds_expert2, default_expert=1)
-    simple_voting_acc_12 = accuracy(simple_voting_pred_12, all_attr_gt)
-
-    simple_voting_pred_23 = voting_(preds_expert2, preds_expert3, default_expert=1)
-    simple_voting_acc_23 = accuracy(simple_voting_pred_23, all_attr_gt)
-
-    simple_voting_pred_13 = voting_(preds_expert1, preds_expert3, default_expert=1)
-    simple_voting_acc_13 = accuracy(simple_voting_pred_13, all_attr_gt)
-
-    # 回到原始函數，進行三個專家的簡單投票
-    simple_voting_pred_123 = voting(preds_expert1, preds_expert2, preds_expert3, default_expert=1)
-    simple_voting_acc_123 = accuracy(simple_voting_pred_123, all_attr_gt)
-
-    # 加權投票，都不一樣選2
-    weighted_voting_pred_12 = weighted_voting_(preds_expert1, preds_expert2, weights=[0.2, 0.7], default_expert=1)
-    weighted_voting_acc_12 = accuracy(weighted_voting_pred_12, all_attr_gt)
-
-    weighted_voting_pred_23 = weighted_voting_(preds_expert2, preds_expert3, weights=[0.2, 0.7], default_expert=1)
-    weighted_voting_acc_23 = accuracy(weighted_voting_pred_23, all_attr_gt)
-
-    weighted_voting_pred_13 = weighted_voting_(preds_expert1, preds_expert3, weights=[0.7, 0.2], default_expert=1)
-    weighted_voting_acc_13 = accuracy(weighted_voting_pred_13, all_attr_gt)
-
-    weighted_voting_pred_123 = weighted_voting(preds_expert1, preds_expert2, preds_expert3, weights=[0.3, 0.4, 0.3], default_expert=2)
-    weighted_voting_acc_123 = accuracy(weighted_voting_pred_123, all_attr_gt)
-    
-    
-    ###20230912更改 新增SOE POE12 13 23 
-    
-    if config.weighted:
-        print("using val weighted voting")
-        if test_dataset.phase == 'val':
-            val_acc_ep1.append(expert1_acc)
-            val_acc_ep2.append(expert2_acc)
-            val_acc_ep3.append(expert3_acc)
-            #在val時載入append val acc的數值 06/21
-    if yfs == "":
-        stats['attr_acc_simple_voting_acc_123'+yfs] = simple_voting_acc_123
-        stats['attr_acc_simple_voting_acc_12'+yfs] = simple_voting_acc_12
-        stats['attr_acc_simple_voting_acc_13'+yfs] = simple_voting_acc_13
-        stats['attr_acc_simple_voting_acc_23'+yfs] = simple_voting_acc_23
-
-        stats['attr_acc_weighted_voting_acc_123'+yfs] = weighted_voting_acc_123
-        stats['attr_acc_weighted_voting_acc_12'+yfs] = weighted_voting_acc_12
-        stats['attr_acc_weighted_voting_acc_13'+yfs] = weighted_voting_acc_13
-        stats['attr_acc_weighted_voting_acc_23'+yfs] = weighted_voting_acc_23
-        
-        stats['FDR_expert1'+yfs] = FDR_expert1
-        stats['FDR_expert2'+yfs] = FDR_expert2    
-        stats['FDR_expert3'+yfs] = FDR_expert3
-        stats['FOR_expert1'+yfs] = FOR_expert1
-        stats['FOR_expert2'+yfs] = FOR_expert2    
-        stats['FOR_expert3'+yfs] = FOR_expert3
-        
-        stats['attr_acc_f1_expert1'+yfs] = f1_expert1
-        stats['attr_acc_f1_expert2'+yfs] = f1_expert2    
-        stats['attr_acc_f1_expert3'+yfs] = f1_expert3
-    
-    
-    stats['attr_acc_POE_acc_123'+yfs] = POE_acc_123
-    stats['attr_acc_POE_acc_12'+yfs] = POE_acc_12
-    stats['attr_acc_POE_acc_13'+yfs] = POE_acc_13
-    stats['attr_acc_POE_acc_23'+yfs] = POE_acc_23
-
-    stats['attr_acc_SOE_acc_123'+yfs] =SOE_acc_123
-    stats['attr_acc_SOE_acc_12'+yfs] = SOE_acc_12
-    stats['attr_acc_SOE_acc_13'+yfs] = SOE_acc_13
-    stats['attr_acc_SOE_acc_23'+yfs] = SOE_acc_23
-
-    stats['attr_acc_ep1_cor'+yfs] = expert1_acc
-    stats['attr_acc_ep2_cor'+yfs] = expert2_acc    
-    stats['attr_acc_ep3_cor'+yfs] = expert3_acc
-
     stats['attr_acc_uce_ep1'+yfs] = uce_ep1
     stats['attr_acc_uce_ep2'+yfs] = uce_ep2
     stats['attr_acc_uce_ep3'+yfs] = uce_ep3
-
+    
     stats['attr_acc_table_acc_ep12'+yfs] = table_acc_ep12
     stats['attr_acc_table_acc_ep23'+yfs] = table_acc_ep23
     stats['attr_acc_table_acc_ep13'+yfs] = table_acc_ep13
     stats['attr_acc_tabel_acc_ep123'+yfs] = tabel_acc_ep123
-
-
     
-
+    
+    stats['attr_acc_ep1_cor'+yfs] = expert1_acc
+    stats['attr_acc_ep2_cor'+yfs] = expert2_acc    
+    stats['attr_acc_ep3_cor'+yfs] = expert3_acc
+    
+    stats['attr_acc_f1_expert1'+yfs] = f1_expert1
+    stats['attr_acc_f1_expert2'+yfs] = f1_expert2    
+    stats['attr_acc_f1_expert3'+yfs] = f1_expert3
+    
+    stats['FDR_expert1'+yfs] = FDR_expert1
+    stats['FDR_expert2'+yfs] = FDR_expert2    
+    stats['FDR_expert3'+yfs] = FDR_expert3
+    stats['FOR_expert1'+yfs] = FOR_expert1
+    stats['FOR_expert2'+yfs] = FOR_expert2    
+    stats['FOR_expert3'+yfs] = FOR_expert3
 
 def predict_logits(model, dataset, config):
     """Function to predict the cosine similarities between the
@@ -1159,7 +986,7 @@ def predict_logits(model, dataset, config):
             all_attr_gt.append(attr_truth)
             all_obj_gt.append(obj_truth)
             all_pair_gt.append(pair_truth)
-#             break
+
 
     all_attr_gt, all_obj_gt, all_pair_gt = (
         torch.cat(all_attr_gt).to("cpu"),
@@ -1276,8 +1103,7 @@ def test(
     #--------------------------------------
     if config.open_world == True:
         yfs = ""
-    
-#     cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,pairs,yfs,stats,test_dataset,config)
+        cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,pairs,yfs,stats,test_dataset,config)
     #--------------------------------------
     stats['attr_acc'] = attr_acc
     stats['obj_acc'] = obj_acc
@@ -1347,8 +1173,9 @@ def test__yfs(
     
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]    
     attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     #計算ep1 attr UCE
     uce_and_bin_values_all_logits_attr = [compute_uce(S_attr_exp1, all_attr_gt)]
@@ -1374,73 +1201,55 @@ def test_yfs_ep2_nfs_ep1(
         test_dataset,
         stats,
         evaluator,
-        all_logits,   #這個是nfs
-        all_logits_,  #這個是yfs
-        all_logits_org,  #新增原本尚未改過的all_logit
+        all_logits,   # 這個是 nfs
+        all_logits_,  # 這個是 yfs
+        all_logits_org,  # 原本尚未改過的 all_logit
         all_attr_gt,
         all_obj_gt,
         all_pair_gt,
         config):
-    
+
     global val_uce_list_ep1
     global val_uce_list_ep2
     global val_uce_list_ep3
-    global val_acc_ep1
-    global val_acc_ep2
-    global val_acc_ep3
-    
-    
-    weight_ep1 = 1.0
-    weight_ep2 = 1.0
-    weight_ep3 = 1.0
-    if config.weighted:
-        if test_dataset.phase == 'test':
-            print("using test weighted voting")
-            weight_ep1,weight_ep2,weight_ep3=val_acc_ep1[0],val_acc_ep2[1],val_acc_ep3[1]
-            print(weight_ep1,weight_ep2,weight_ep3)
-            
-    
-    
-    
+
+    device = all_logits.device  # 確認張量所在設備
     attr2idx = test_dataset.attr2idx
     obj2idx = test_dataset.obj2idx
     pairs_dataset = test_dataset.pairs
-    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj])
-                                for attr, obj in pairs_dataset]).cuda()
-    #nfs_ep1 使用all_logits 
-    all_logits_attr = torch.zeros(all_logits.size(0), len(test_dataset.attrs))
+    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj]) for attr, obj in pairs_dataset]).to(device)
+
+    # nfs_ep1 使用 all_logits
+    all_logits_attr = torch.zeros(all_logits.size(0), len(test_dataset.attrs)).to(device)
     for i, (attr_idx, obj_idx) in enumerate(pairs):
         all_logits_attr[:, attr_idx] += all_logits[:, i]
     all_logits_attr /= len(test_dataset.objs)
-    att_ped_org = torch.argmax(all_logits_attr,dim=1)
-    
-    # yfs_ep3 使用all_logits_
-    obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
-    attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits_[i,obj_idx].unsqueeze(0)], dim=0)
-        
-    
-    
-    S_attr_exp1 = F.softmax(all_logits_attr, dim=1)   #這個是nfs_ep1
-    S_pair_exp2 = F.softmax(all_logits_org, dim=1)       #這個是yfs_ep2_org
-    S_attr_exp3 = F.softmax(attr_exp3, dim=1)         #這個是yfs_ep3
-    
-    table_pred_yfs_ep2_nfs_ep1 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2,weight_ep1,weight_ep2)
-    table_acc_yfs_ep2_nfs_ep1= accuracy(table_pred_yfs_ep2_nfs_ep1,all_attr_gt)
-    
-    table_pred_yfs_ep3_nfs_ep1 = choose_best_expert_ex(S_attr_exp1, S_attr_exp3, all_attr_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep3,weight_ep1,weight_ep3)
-    table_acc_yfs_ep3_nfs_ep1= accuracy(table_pred_yfs_ep3_nfs_ep1,all_attr_gt) 
-        
-    
-    table_pred_yfs_ep23_nfs_ep1 = choose_best_three_expert(S_attr_exp1,S_pair_exp2,S_attr_exp3,pairs,all_attr_gt,all_pair_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,weight_ep1,weight_ep2,weight_ep3)
-    table_acc_yfs_ep23_nfs_ep1 = accuracy(table_pred_yfs_ep23_nfs_ep1,all_attr_gt)
+    att_ped_org = torch.argmax(all_logits_attr, dim=1)
 
+    # yfs_ep3 使用 all_logits_
+    obj_idxs = [torch.where(pairs[:, 1] == obj)[0].to(device) for obj in all_obj_gt]  # 確保索引在正確設備上
+    attr_exp3 = torch.Tensor().to(device)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        attr_exp3 = torch.cat([attr_exp3, all_logits_[i, obj_idx].unsqueeze(0)], dim=0)
+
+    # 計算 softmax
+    S_attr_exp1 = F.softmax(all_logits_attr, dim=1)   # nfs_ep1
+    S_pair_exp2 = F.softmax(all_logits_org, dim=1)    # yfs_ep2_org
+    S_attr_exp3 = F.softmax(attr_exp3, dim=1)         # yfs_ep3
+
+    # 計算雙專家表現
+    table_pred_yfs_ep2_nfs_ep1 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt, all_pair_gt, pairs, test_dataset, val_uce_list_ep1, val_uce_list_ep2)
+    table_acc_yfs_ep2_nfs_ep1 = accuracy(table_pred_yfs_ep2_nfs_ep1, all_attr_gt)
+
+    # 計算三專家表現
+    table_pred_yfs_ep23_nfs_ep1 = choose_best_three_expert(S_attr_exp1, S_pair_exp2, S_attr_exp3, pairs, all_attr_gt, all_pair_gt, test_dataset, val_uce_list_ep1, val_uce_list_ep2, val_uce_list_ep3)
+    table_acc_yfs_ep23_nfs_ep1 = accuracy(table_pred_yfs_ep23_nfs_ep1, all_attr_gt)
+
+    # 更新統計數據
     stats['table_acc_yfs_ep2_nfs_ep1'] = table_acc_yfs_ep2_nfs_ep1
-    stats['table_acc_yfs_ep3_nfs_ep1'] = table_acc_yfs_ep3_nfs_ep1
     stats['table_acc_yfs_ep23_nfs_ep1'] = table_acc_yfs_ep23_nfs_ep1
-    
-    return stats  
+
+    return stats
 
 
 def construct_uce_table(model, train_dataset,train_dataset_CL,  config):
@@ -1489,8 +1298,10 @@ def construct_uce_table(model, train_dataset,train_dataset_CL,  config):
     attr_exp3 = torch.Tensor()    
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits[i,obj_idx].unsqueeze(0)], dim=0)
+    attr_exp3 = torch.Tensor().to(all_logits.device)  # 初始化時設置設備
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        obj_idx = obj_idx.to(all_logits.device)  # 確保索引在正確設備
+        attr_exp3 = torch.cat([attr_exp3, all_logits[i, obj_idx].unsqueeze(0)], dim=0)
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     
     probs_expert1 ,probs_expert2,probs_expert3 = S_attr_exp1,S_pair_exp2,S_attr_exp3
@@ -1546,7 +1357,8 @@ if __name__ == "__main__":
     print(f"dataset: {config.dataset}")
 
 
-
+    
+    
     dataset_path = config.dataset_path
     
     print('loading train dataset')
@@ -1606,13 +1418,6 @@ if __name__ == "__main__":
     val_uce_list_ep2 = []
     val_uce_list_ep3 = []
     use_fs = False
-    val_acc_ep1 = []
-    val_acc_ep2 = []
-    val_acc_ep3 = []
-
-    
-    
-    
        ### 使用train data建立UCE lookup table
     if config.train_look_up_table == True or config.train_look_up_table == False:
         construct_uce_table(model, train_dataset,train_dataset_CL,  config)
@@ -1675,7 +1480,7 @@ if __name__ == "__main__":
                 all_logits_list, all_attr_gt_list, all_obj_gt_list, all_pair_gt_list, logits_attrs_list_list = [], [], [], [], []
 
                 for _ in range(n_iterations):
-                    all_logits_, all_attr_gt, all_obj_gt, all_pair_gt, logits_attrs_list_, loss_avg = predict_logits(model, val_dataset, config)
+                    all_logits_, all_attr_gt, all_obj_gt, all_pair_gt, logits_attrs_list_, loss_avg = predict_logits(model, val_dataset, device, config)
                     all_logits_list.append(all_logits_)
                     logits_attrs_list_list.append(logits_attrs_list_)
 
@@ -1823,50 +1628,20 @@ if __name__ == "__main__":
     if best_th is not None:
         results['best_threshold'] = best_th
 
-        
-        
-    if config.weighted:
-        root = config.load_model[:-2] +'weighted_'
-    else:
-        root = config.load_model[:-2]
     if config.open_world:
         if config.train_look_up_table == True:
-            result_path = root +"train_uce_use_fs"+"open.calibrated.json"
+            result_path = config.load_model[:-2] +"train_uce_use_fs"+"open.calibrated.json"
         elif config.train_look_up_table == "val_use_fs":
-            result_path = root +"val_uce_use_fs" +"open.calibrated.json"
+            result_path = config.load_model[:-2] +"val_uce_use_fs" +"open.calibrated.json"
         elif config.train_look_up_table == "val_nouse_fs":
-            result_path = root +"val_nouse_fs" +"open.calibrated.json"
+            result_path = config.load_model[:-2] +"val_nouse_fs" +"open.calibrated.json"
         else:
-            result_path = root + "open.calibrated.json"
+            result_path = config.load_model[:-2] + "open.calibrated.json"
     else:
         result_path = config.load_model[:-2] + "closed.json"
 
 
-        
-        
-        
     with open(result_path, 'w+') as fp:
         json.dump(results, fp, default=lambda o: o.item() if isinstance(o, torch.Tensor) else o)
-
-
-
-    print(results) 
-#     print("done!")        
-
-
-#     result_path = result_path[:-4]+".csv"
-
-
-#     with open(result_path, 'w+', newline='') as fp:
-#         writer = csv.writer(fp)
-
-#         # 寫入標題
-#         headers = ['Dataset'] + list(results['val'].keys())
-#         writer.writerow(headers)
-
-#         # 寫入每一行
-#         for dataset, data in results.items():
-#             row = [dataset] + list(data.values())
-#             writer.writerow(row)
 
     print("done!")

@@ -1201,50 +1201,55 @@ def test_yfs_ep2_nfs_ep1(
         test_dataset,
         stats,
         evaluator,
-        all_logits,   #這個是nfs
-        all_logits_,  #這個是yfs
-        all_logits_org,  #新增原本尚未改過的all_logit
+        all_logits,   # 這個是 nfs
+        all_logits_,  # 這個是 yfs
+        all_logits_org,  # 原本尚未改過的 all_logit
         all_attr_gt,
         all_obj_gt,
         all_pair_gt,
         config):
-    
+
     global val_uce_list_ep1
     global val_uce_list_ep2
     global val_uce_list_ep3
+
+    device = all_logits.device  # 確認張量所在設備
     attr2idx = test_dataset.attr2idx
     obj2idx = test_dataset.obj2idx
     pairs_dataset = test_dataset.pairs
-    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj])
-                                for attr, obj in pairs_dataset]).cuda()
-    #nfs_ep1 使用all_logits 
-    all_logits_attr = torch.zeros(all_logits.size(0), len(test_dataset.attrs))
+    pairs = torch.tensor([(attr2idx[attr], obj2idx[obj]) for attr, obj in pairs_dataset]).to(device)
+
+    # nfs_ep1 使用 all_logits
+    all_logits_attr = torch.zeros(all_logits.size(0), len(test_dataset.attrs)).to(device)
     for i, (attr_idx, obj_idx) in enumerate(pairs):
         all_logits_attr[:, attr_idx] += all_logits[:, i]
     all_logits_attr /= len(test_dataset.objs)
-    att_ped_org = torch.argmax(all_logits_attr,dim=1)
-    
-    # yfs_ep3 使用all_logits_
-    obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
-    attr_exp3 = torch.Tensor()
-    for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):
-        attr_exp3 =  torch.cat([attr_exp3 ,all_logits_[i,obj_idx].unsqueeze(0)], dim=0)
-        
-    
-    
-    S_attr_exp1 = F.softmax(all_logits_attr, dim=1)   #這個是nfs_ep1
-    S_pair_exp2 = F.softmax(all_logits_org, dim=1)       #這個是yfs_ep2_org
-    S_attr_exp3 = F.softmax(attr_exp3, dim=1)         #這個是yfs_ep3
-    
-    table_pred_yfs_ep2_nfs_ep1 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt,all_pair_gt,pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2)
-    table_acc_yfs_ep2_nfs_ep1= accuracy(table_pred_yfs_ep2_nfs_ep1,all_attr_gt)
-    
-    table_pred_yfs_ep23_nfs_ep1 = choose_best_three_expert(S_attr_exp1,S_pair_exp2,S_attr_exp3,pairs,all_attr_gt,all_pair_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3)
-    table_acc_yfs_ep23_nfs_ep1 = accuracy(table_pred_yfs_ep23_nfs_ep1,all_attr_gt)
+    att_ped_org = torch.argmax(all_logits_attr, dim=1)
 
+    # yfs_ep3 使用 all_logits_
+    obj_idxs = [torch.where(pairs[:, 1] == obj)[0].to(device) for obj in all_obj_gt]  # 確保索引在正確設備上
+    attr_exp3 = torch.Tensor().to(device)
+    for i, obj_idx in zip(range(len(obj_idxs)), obj_idxs):
+        attr_exp3 = torch.cat([attr_exp3, all_logits_[i, obj_idx].unsqueeze(0)], dim=0)
+
+    # 計算 softmax
+    S_attr_exp1 = F.softmax(all_logits_attr, dim=1)   # nfs_ep1
+    S_pair_exp2 = F.softmax(all_logits_org, dim=1)    # yfs_ep2_org
+    S_attr_exp3 = F.softmax(attr_exp3, dim=1)         # yfs_ep3
+
+    # 計算雙專家表現
+    table_pred_yfs_ep2_nfs_ep1 = choose_best_expert(S_attr_exp1, S_pair_exp2, all_attr_gt, all_pair_gt, pairs, test_dataset, val_uce_list_ep1, val_uce_list_ep2)
+    table_acc_yfs_ep2_nfs_ep1 = accuracy(table_pred_yfs_ep2_nfs_ep1, all_attr_gt)
+
+    # 計算三專家表現
+    table_pred_yfs_ep23_nfs_ep1 = choose_best_three_expert(S_attr_exp1, S_pair_exp2, S_attr_exp3, pairs, all_attr_gt, all_pair_gt, test_dataset, val_uce_list_ep1, val_uce_list_ep2, val_uce_list_ep3)
+    table_acc_yfs_ep23_nfs_ep1 = accuracy(table_pred_yfs_ep23_nfs_ep1, all_attr_gt)
+
+    # 更新統計數據
     stats['table_acc_yfs_ep2_nfs_ep1'] = table_acc_yfs_ep2_nfs_ep1
     stats['table_acc_yfs_ep23_nfs_ep1'] = table_acc_yfs_ep23_nfs_ep1
-    return stats  
+
+    return stats
 
 
 def construct_uce_table(model, train_dataset,train_dataset_CL,  config):

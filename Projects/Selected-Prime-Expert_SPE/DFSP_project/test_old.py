@@ -1002,29 +1002,25 @@ def threshold_with_feasibility(
         seen_mask,
         threshold=None,
         feasiblity=None):
-    """Function to remove infeasible compositions.
-
-    Args:
-        logits (torch.Tensor): the cosine similarities between
-            the images and the attribute-object pairs.
-        seen_mask (torch.tensor): the seen mask with binary
-        threshold (float, optional): the threshold value.
-            Defaults to None.
-        feasiblity (torch.Tensor, optional): the feasibility.
-            Defaults to None.
-
-    Returns:
-        torch.Tensor: the logits after filtering out the
-            infeasible compositions.
-    """
     score = copy.deepcopy(logits)
-    # Note: Pairs are already aligned here
+
+    # 計算 mask
     mask = (feasiblity >= threshold).float()
-    # score = score*mask + (1.-mask)*(-1.)
+    print(f"score shape: {score.shape}")
+    print(f"mask shape: {mask.shape}")
+    print(f"seen_mask shape: {seen_mask.shape}")
+
+    # 確保形狀匹配
+    if mask.dim() == 1:
+        mask = mask.unsqueeze(0).repeat(score.size(0), 1)
+    if seen_mask.dim() == 1:
+        seen_mask = seen_mask.unsqueeze(0).repeat(score.size(0), 1)
+
+    print(f"Expanded mask shape: {mask.shape}")
+    print(f"Expanded seen_mask shape: {seen_mask.shape}")
+
     score = score * (mask + seen_mask)
-
     return score
-
 
 def test(
         test_dataset,

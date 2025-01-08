@@ -14,7 +14,6 @@ import numpy as np
 
 
 class DFSP(nn.Module):
-class DFSP(nn.Module):
     def __init__(self, config, attributes, classes, offset):
         super().__init__()
         clip_model, _ = load(config.clip_model, context_length=config.context_length)

@@ -1825,7 +1825,7 @@ def construct_uce_table(model, train_dataset,train_dataset_CL,  config):
     S_pair_exp2 = F.softmax(all_logits, dim=1)
     # 並將對應的位置將S_all_logits>S_logit_attr_ours
     
-    attr_exp3 = torch.Tensor()    
+    attr_exp3 = torch.Tensor().to(all_logits.device)   
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
     for i,obj_idx in zip(range(len(obj_idxs)),obj_idxs):

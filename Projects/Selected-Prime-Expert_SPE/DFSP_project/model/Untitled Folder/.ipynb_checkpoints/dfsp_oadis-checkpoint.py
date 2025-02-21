@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from itertools import product
 from turtle import shape
 import torch
@@ -9,7 +8,7 @@ import argparse
 import clip
 from collections import OrderedDict
 from clip_modules.model_loader import load
-from model_MCDP.common import *
+from model.common import *
 import numpy as np
 
 
@@ -23,7 +22,6 @@ class DFSP(nn.Module):
         self.attributes = attributes
         self.classes = classes
         self.attr_dropout = nn.Dropout(config.attr_dropout)
-        self.dropout = nn.Dropout(p=0.3)  ##新增Monte Carlo Dropout
         self.token_ids, self.soft_att_obj, ctx_vectors = self.construct_soft_prompt()
         self.offset = offset
         self.enable_pos_emb = True
@@ -40,7 +38,8 @@ class DFSP(nn.Module):
         self.soft_prompt = nn.Parameter(ctx_vectors).cuda()
         self.fusion = FusionTextImageBlock(config.width_img, config.width_txt, len(self.attributes), len(self.classes), config.SA_K, context_length=self.config.context_length, fusion=self.config.fusion)
         self.weight = config.res_w
-        self.log_idx = True
+
+
     def construct_soft_prompt(self):
         token_ids = clip.tokenize("a photo of x x",
                               context_length=self.config.context_length).cuda()
@@ -153,28 +152,15 @@ class DFSP(nn.Module):
 
         return logits_att, logits_obj
 
-###---------------增加計算投影--------------
-    def cal_proj_f_v_to_s_given_o(self,f_v,f_s_given_o):
-        # 計算 f_s_given_o 的轉置乘以 f_s_given_o，再取其反矩陣
-        temp = torch.matmul(f_s_given_o, f_s_given_o.t()).inverse()
-        #最後與 𝑓(𝑠|𝑜)(𝑓_(𝑠|𝑜)^𝑇 𝑓_(𝑠|𝑜))〗^(−1)𝑓(𝑠|𝑜)^T
-        temp1 = torch.matmul(f_s_given_o.t(),temp)
-        temp2 =torch.matmul(temp1,f_s_given_o)
-        # 計算 f_v 與上述結果的乘積，即可得到 f_v->s|o 的轉置
-        f_v_to_s_given_o_t = torch.matmul(temp2, f_v.t().float())
-        # 轉置回來即為 f_v->s|o
-        f_v_to_s_given_o = f_v_to_s_given_o_t.t()
-        return f_v_to_s_given_o
 
-
-
-
-    def forward(self, batch_img, idx,know_obj_test = False,gt_obj_idx=None,all_fv_proj_idx=None):
-        b = batch_img.shape[0]
+    def forward(self, batch, idx):
+        img1 = batch['img']
+        img2_a = batch['img1_a'] # Image that shares the same attribute
+        img2_o = batch['img1_o'] # Image that shares the same object
+        
+        b = img1.shape[0]
         l, _ = idx.shape
-        batch_img, img_ft = self.visual(batch_img.type(self.clip.dtype))   ## bs * 768
-        if self.config.dropout1:
-            img_ft = self.dropout(img_ft)   ###新增一個dropout
+        batch_img, img_ft = self.visual(img1.type(self.clip.dtype))   ## bs * 768
         token_tensors = self.construct_token_tensors(idx)
         text_features, text_ft = self.text_encoder(
             self.token_ids,
@@ -184,7 +170,7 @@ class DFSP(nn.Module):
 
         batch_img_soft_prompt = batch_img / batch_img.norm(dim=-1, keepdim=True)
         text_features_soft_prompt = text_features / text_features.norm(dim=-1, keepdim=True)
-        img_ft, text_ft = self.fusion(img_ft.type(torch.float), text_ft.type(torch.float), idx, b,self.config)
+        img_ft, text_ft = self.fusion(img_ft.type(torch.float), text_ft.type(torch.float), idx, b)
         img_ft, text_ft = self.ft_to_logit(img_ft.type(self.clip.dtype), text_ft.type(self.clip.dtype))
         batch_img = self.weight * batch_img + (1 - self.weight) * img_ft
         normalized_img = batch_img / batch_img.norm(dim=-1, keepdim=True)
@@ -214,37 +200,6 @@ class DFSP(nn.Module):
             @ text_features_soft_prompt.t()
         )     
 
-
-
         logits_att, logits_obj = self.decompose_logits(logits_soft_prompt, idx)
-        if know_obj_test:  ###是否要改logit_attrs
-#             print(idx_text_features.size())
-            ft_plus=self.fusion.decompose_ftfsfo(idx_text_features,idx)
-            _,attr_nub=logits_att.size()
-            fo = ft_plus[attr_nub:, :]
-            fs = ft_plus[:attr_nub, :]   ###獲得fs
-            
-            f_s_given_o = torch.Tensor().cuda()
-            proj_f_v_to_s_given_o_finally = torch.Tensor().cuda()
-            for gt_obj,batch_idx in zip(gt_obj_idx,range(len(gt_obj_idx))):  ### gt_obj_idx=f=data[2]是當前batch的gt，gt_obj是當前的gt
-                f_s_given_o = torch.Tensor().cuda()
-                for proj_idx in all_fv_proj_idx[gt_obj]:       
-                    ##將當前batch的第batch_idx個gt輸入進all_fv_proj_idx中，並找尋他的位子
-                    index = torch.nonzero(torch.eq(idx, proj_idx).all(dim=1))         
-                    f_s_given_o = torch.cat([f_s_given_o, idx_text_features[index[0]]], dim=0)   ###獲得fv_proj s|o
-#                 print(f_s_given_o.size())
-                proj_f_v_to_s_given_o = self.cal_proj_f_v_to_s_given_o(normalized_img[batch_idx],f_s_given_o)   
-                ###第 batch_idx個圖片與f_s_given_o進行計算 ，獲得proj_f_v_to_s_given_o後 concat起來
-                ### fv dim(b,768) f(𝑠|𝑜)  dim(?,768)>f(v→s|o)^T dim(b,768)
-                proj_f_v_to_s_given_o_finally = torch.cat([proj_f_v_to_s_given_o_finally, proj_f_v_to_s_given_o.unsqueeze(0)] , dim=0)
-            proj_f_v_to_s_given_o_finally_norm=proj_f_v_to_s_given_o_finally / proj_f_v_to_s_given_o_finally.norm(dim=-1, keepdim=True)
 
-            logits_att_our = (
-                self.clip.logit_scale.exp()
-                * proj_f_v_to_s_given_o_finally_norm
-                @ fs.t()
-                        )   
-
-#         logits = logits / self.temperature_logits
-#         logits_att_our = logits_att_our / self.temperature_logits_att_our
-        return (logits, logits_att, logits_obj, logits_soft_prompt,logits_att_our)
+        return (logits, logits_att, logits_obj, logits_soft_prompt)

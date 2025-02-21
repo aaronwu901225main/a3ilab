@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from stringprep import b1_set
 from turtle import shape
 import torch
@@ -260,7 +259,7 @@ class FusionTextImageBlock(nn.Module):
         return x
         
 
-    def forward(self, x_image: torch.Tensor, x_text: torch.Tensor, idx, b: int,config):
+    def forward(self, x_image: torch.Tensor, x_text: torch.Tensor, idx, b: int):
         if self.fusion == "BiFusion":
             x_img = self.crossblock_img(x_image, self.txt2img(x_text, idx, b))
             x_txt = self.img2txt(x_image)
@@ -282,8 +281,7 @@ class FusionTextImageBlock(nn.Module):
             return x_img, x_txt
         elif self.fusion == "txt2img":
             x_img = self.crossblock_img(x_image, self.txt2img(x_text, idx, b))
-            if config.dropout2:
-                x_img = self.dropout(x_img)    ###新增一個dropout
+#             x_img = self.dropout(x_img) 
             x_img = self.resblocks_img(x_img)
             x_txt = self.resblocks_txt(x_text)
             return x_img, x_txt

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from itertools import product
 from turtle import shape
 import torch
@@ -23,7 +22,7 @@ class DFSP(nn.Module):
         self.attributes = attributes
         self.classes = classes
         self.attr_dropout = nn.Dropout(config.attr_dropout)
-        self.dropout = nn.Dropout(p=0.3)  ##新增Monte Carlo Dropout
+        self.dropout = nn.Dropout(p=0.5)  ##新增Monte Carlo Dropout
         self.token_ids, self.soft_att_obj, ctx_vectors = self.construct_soft_prompt()
         self.offset = offset
         self.enable_pos_emb = True
@@ -41,6 +40,7 @@ class DFSP(nn.Module):
         self.fusion = FusionTextImageBlock(config.width_img, config.width_txt, len(self.attributes), len(self.classes), config.SA_K, context_length=self.config.context_length, fusion=self.config.fusion)
         self.weight = config.res_w
         self.log_idx = True
+
     def construct_soft_prompt(self):
         token_ids = clip.tokenize("a photo of x x",
                               context_length=self.config.context_length).cuda()
@@ -173,7 +173,6 @@ class DFSP(nn.Module):
         b = batch_img.shape[0]
         l, _ = idx.shape
         batch_img, img_ft = self.visual(batch_img.type(self.clip.dtype))   ## bs * 768
-#         img_ft = self.dropout(img_ft)
         token_tensors = self.construct_token_tensors(idx)
         text_features, text_ft = self.text_encoder(
             self.token_ids,
@@ -190,34 +189,60 @@ class DFSP(nn.Module):
         if self.config.fusion in ["BiFusion", "img2txt"]: 
             text_features = self.weight * text_features.repeat(b, 1, 1) + (1 - self.weight) * text_ft
         else:
-#             print(text_features)
-#             print(text_ft)
             text_features = self.weight * text_features + (1 - self.weight) * text_ft
         idx_text_features = text_features / text_features.norm(
             dim=-1, keepdim=True
         )
-        if self.config.fusion in ["BiFusion", "img2txt"]: 
-            logits = (
-                self.clip.logit_scale.exp()
-                * normalized_img.unsqueeze(1)
-                @ idx_text_features.permute(0,2,1)
-            ).squeeze()     ###     48 * 1262
+#         if self.config.fusion in ["BiFusion", "img2txt"]: 
+#             logits = (
+#                 self.clip.logit_scale.exp()
+#                 * normalized_img.unsqueeze(1)
+#                 @ idx_text_features.permute(0,2,1)
+#             ).squeeze()     ###     48 * 1262
+#         else:
+#             logits = (
+#                 self.clip.logit_scale.exp()
+#                 * normalized_img
+#                 @ idx_text_features.t()
+#             )   
+
+#         logits_soft_prompt = (
+#             self.clip.logit_scale.exp()
+#             * batch_img_soft_prompt
+#             @ text_features_soft_prompt.t()
+#         )     
+
+#         logits_att, logits_obj = self.decompose_logits(logits_soft_prompt, idx)
+        if phase:
+            num_samples = 10  # number of dropout samples to take
+            logits_list = []
+            for i in range(num_samples):
+                if self.config.fusion in ["BiFusion", "img2txt"]: 
+                    mc_normalized_img = self.dropout(normalized_img.unsqueeze(1))
+                    logits = (
+                        self.clip.logit_scale.exp()
+                        * mc_normalized_img
+                        @ idx_text_features.permute(0, 2, 1)
+                    ).squeeze()  # 48 * 1262
+                else:
+                    mc_normalized_img = self.dropout(normalized_img)
+                    logits = (
+                        self.clip.logit_scale.exp() * mc_normalized_img @ idx_text_features.t()
+                    )
+                logits_list.append(logits)
+            logits = torch.stack(logits_list).mean(dim=0)
         else:
-            logits = (
-                self.clip.logit_scale.exp()
-                * normalized_img
-                @ idx_text_features.t()
-            )   
-
-        logits_soft_prompt = (
-            self.clip.logit_scale.exp()
-            * batch_img_soft_prompt
-            @ text_features_soft_prompt.t()
-        )     
-
-
-
-        logits_att, logits_obj = self.decompose_logits(logits_soft_prompt, idx)
+            if self.config.fusion in ["BiFusion", "img2txt"]: 
+                logits = (
+                    self.clip.logit_scale.exp()
+                    * normalized_img.unsqueeze(1)
+                    @ idx_text_features.permute(0, 2, 1)
+                ).squeeze()  # 48 * 1262
+            else:
+                logits = (
+                    self.clip.logit_scale.exp() * normalized_img @ idx_text_features.t()
+                )
+                
         if know_obj_test:  ###是否要改logit_attrs
 #             print(idx_text_features.size())
             ft_plus=self.fusion.decompose_ftfsfo(idx_text_features,idx)
@@ -245,7 +270,7 @@ class DFSP(nn.Module):
                 * proj_f_v_to_s_given_o_finally_norm
                 @ fs.t()
                         )   
-
-#         logits = logits / self.temperature_logits
-#         logits_att_our = logits_att_our / self.temperature_logits_att_our
+            
+        
+        
         return (logits, logits_att, logits_obj, logits_soft_prompt,logits_att_our)

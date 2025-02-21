@@ -10,7 +10,7 @@ model:
 
 train:
   dataset: ut-zappos
-  dataset_path: "../DFSP_org/download_data/data/ut-zappos"
+  dataset_path: "./dataset/ut-zappos"
   lr: 0.0005
   attr_dropout: 0.3
   weight_decay: 0.00001

@@ -10,7 +10,7 @@ model:
 
 train:
   dataset: mit-states
-  dataset_path: "../OADis/OADis/path/to/mitstates"
+  dataset_path: "./dataset/mitstates"
   lr: 0.0001
   attr_dropout: 0.3
   weight_decay: 0.00001

@@ -21,7 +21,7 @@ train:
   seed: 2134
   epochs: 20
   epoch_start: 0
-  save_path: data/model/ut-zappos_ours_MC_dropout2/dfsp
+  save_path: data/model/ut-zappos_ours_MC_dropout1_ep10/dfsp
   best_model_metric: best_loss     #best_unseen  best_seen AUCs best_loss best_hm
   save_model: True
   load_model: False     # False or model path
@@ -30,14 +30,13 @@ train:
   obj: 0.005
   attr_ours: 0.005
   phase: Fasle
-  dropout1: Fasle
-  dropout2: True
-  train_MCD_step: 3
-  
+  dropout1: True
+  dropout2: Fasle
+  train_MCD_step: 10
 test:
   eval_batch_size: 256
   open_world: True
-  load_model: "data/model/ut-zappos_ours_MC_dropout2/dfsp/txt2img_best.pt"
+  load_model: "data/model/ut-zappos_ours_MC_dropout1_ep10/dfsp/txt2img_best.pt"
   topk: 1
   text_encoder_batch_size: 36
   threshold: 0.4

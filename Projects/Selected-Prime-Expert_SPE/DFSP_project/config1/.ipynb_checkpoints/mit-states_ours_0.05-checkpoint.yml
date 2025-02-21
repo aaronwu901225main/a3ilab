@@ -8,39 +8,35 @@ model:
   width_img: 1024
   width_txt: 768
 
-
 train:
-  dataset: ut-zappos
-  dataset_path: "../DFSP_org/download_data/data/ut-zappos"
-  lr: 0.0005
+  dataset: mit-states
+  dataset_path: "../OADis/OADis/path/to/mitstates"
+  lr: 0.0001
   attr_dropout: 0.3
   weight_decay: 0.00001
   context_length: 8
   train_batch_size: 128
   gradient_accumulation_steps: 2
-  seed: 2134
+  seed: 0
   epochs: 20
   epoch_start: 0
-  save_path: data/model/ut-zappos_ours_MC_dropout2/dfsp
-  best_model_metric: best_loss     #best_unseen  best_seen AUCs best_loss best_hm
-  save_model: True
-  load_model: False     # False or model path
+  save_path: data/model/mit-states_ours_0.05
+  load_model: False
+  best_model_metric: best_unseen     #best_unseen  best_seen AUC best_loss best_hm
   sp_w: 0.1
   att: 0
   obj: 0.005
   attr_ours: 0.005
   phase: Fasle
-  dropout1: Fasle
-  dropout2: True
-  train_MCD_step: 3
-  
+
 test:
-  eval_batch_size: 256
+  eval_batch_size: 128
   open_world: True
-  load_model: "data/model/ut-zappos_ours_MC_dropout2/dfsp/txt2img_best.pt"
   topk: 1
   text_encoder_batch_size: 36
   threshold: 0.4
   threshold_trials: 50
   bias: 0.001
-  MCD_step: 15
+  load_model:  data/model/mit-states_ours_0.05/txt2img_best.pt    # False or model path
+  MCDP: False
+  train_look_up_table: True

@@ -17,17 +17,17 @@ train:
   context_length: 8
   train_batch_size: 128
   gradient_accumulation_steps: 2
-  seed: 1
+  seed: 0
   epochs: 20
   epoch_start: 0
-  save_path: data/model/mit-states_seed1/dfsp
+  save_path: data/model/mit-states_ours
   load_model: False
   best_model_metric: best_unseen     #best_unseen  best_seen AUC best_loss best_hm
   sp_w: 0.1
-  att: 0.01
+  att: 0
   obj: 0.01
-  attr_ours: 0
-  phase: False
+  attr_ours: 0.01
+  phase: Fasle
 
 test:
   eval_batch_size: 128
@@ -37,6 +37,6 @@ test:
   threshold: 0.4
   threshold_trials: 50
   bias: 0.001
-  load_model:  data/model/mit-states_seed1/dfsp/txt2img_best.pt    # False or model path
+  load_model:  data/model/mit-states_ours/txt2img_best.pt    # False or model path
   MCDP: False
-  train_look_up_table: 'val_nouse_fs'
+  train_look_up_table: True

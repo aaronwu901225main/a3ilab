@@ -163,7 +163,7 @@ if __name__ == "__main__":
     )
     config = parser.parse_args()
 
-    dataset_path = '../OADis/OADis/path/to/mitstates'
+    dataset_path = './dataset/mitstates'
 
     dataset =  CompositionDataset(dataset_path,
                                     phase='test',

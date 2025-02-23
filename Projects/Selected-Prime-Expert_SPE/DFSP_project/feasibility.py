@@ -163,7 +163,10 @@ if __name__ == "__main__":
     )
     config = parser.parse_args()
 
-    dataset_path = './dataset/mitstates'
+    if config.dataset == 'ut-zappos':
+        dataset_path = './dataset/ut-zappos'
+    elif config.dataset == 'mitstates':
+        dataset_path = './dataset/mitstates'
 
     dataset =  CompositionDataset(dataset_path,
                                     phase='test',

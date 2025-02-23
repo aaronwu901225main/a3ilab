@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
     if config.dataset == 'ut-zappos':
         dataset_path = './dataset/ut-zappos'
-    elif config.dataset == 'mitstates':
+    elif config.dataset == 'mit-states':
         dataset_path = './dataset/mitstates'
 
     dataset =  CompositionDataset(dataset_path,

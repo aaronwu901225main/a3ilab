@@ -20,7 +20,7 @@ train:
   seed: 0
   epochs: 20
   epoch_start: 0
-  save_path: data/model/mit-states
+  save_path: data/model/mit-states/dfsp
   load_model: False
   best_model_metric: best_unseen     #best_unseen  best_seen AUC best_loss best_hm
   sp_w: 0.1

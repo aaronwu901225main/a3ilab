@@ -51,6 +51,7 @@ We evaluate our models in two settings: closed-world and open-world.
 ```
 python -u test.py --dataset <dataset>
 ```
+`<dataset>` could be `{mit-states, ut-zappos}`, make sure you train the model before test.
 
 ### Open-World Evaluation
 For our open-world evaluation, we compute the feasbility calibration and then evaluate on the dataset.
@@ -63,19 +64,14 @@ Download the GloVe embeddings in the `data` directory:
 cd data
 wget https://nlp.stanford.edu/data/glove.6B.zip
 ```
-Move `glove.6B.300d.txt` into `data/glove.6B.300d.txt`.
 
 To compute feasibility calibration for each dataset, run the following command:
 ```
-python -u feasibility.py --dataset mit-states
+python -u feasibility.py --dataset <dataset>
 ```
 The feasibility similarities are saved at `data/feasibility_<dataset>.pt`.
 To run, just edit the open-world parameter in `config/<dataset>.yml`
 
-### model 
-
-https://huggingface.co/SerenityYuki/CZSL/tree/main
-https://huggingface.co/SerenityYuki/CZSL-mit/tree/main
 ### SPE and HMOE 
 ```
 python -u test_v4.py --dataset config1_<dataset>

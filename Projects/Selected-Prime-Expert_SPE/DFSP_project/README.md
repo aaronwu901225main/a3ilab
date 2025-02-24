@@ -25,17 +25,16 @@ In this study, we also used different evaluation metrics to test the performance
 
 ## Setup
 ```
-conda create --name clip python=3.7
-conda activate clip
+conda env create -f clip1_env.yml
+conda activate clip1
 pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 pip3 install git+https://github.com/openai/CLIP.git
 ```
-Alternatively, you can use `pip install -r requirements.txt` to install all the dependencies.
 
 ## Download Dataset
-We experiment with three datasets: MIT-States, UT-Zappos, and C-GQA.
+We experiment with two datasets: MIT-States and UT-Zappos.
 ```
-sh download_data.sh
+sh download_dataset.sh
 ```
 
 
@@ -43,6 +42,8 @@ sh download_data.sh
 ```
 python -u train.py --dataset <dataset>
 ```
+You can replace `--dataset` with `{mit-states, ut-zappos}`.
+
 ## Evaluation
 We evaluate our models in two settings: closed-world and open-world.
 
@@ -50,8 +51,6 @@ We evaluate our models in two settings: closed-world and open-world.
 ```
 python -u test.py --dataset <dataset>
 ```
-You can replace `--dataset` with `{mit-states, ut-zappos}`.
-
 
 ### Open-World Evaluation
 For our open-world evaluation, we compute the feasbility calibration and then evaluate on the dataset.

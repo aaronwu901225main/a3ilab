@@ -42,7 +42,7 @@ sh download_dataset.sh
 ```
 python -u train.py --dataset <dataset>
 ```
-You can replace `--dataset` with `{mit-states, ut-zappos}`.
+You can replace `<dataset>` with `{mit-states, ut-zappos}`.
 
 ## Evaluation
 We evaluate our models in two settings: closed-world and open-world.

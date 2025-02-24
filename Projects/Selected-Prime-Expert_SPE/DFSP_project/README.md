@@ -11,7 +11,7 @@ DFSP is a model which decomposes the prompt language feature into state feature 
 
 
 If you already have setup the datasets, you can use symlink and ensure the following paths exist:
-`data/<dataset>` where `<datasets> = {'mit-states', 'ut-zappos', 'cgqa'}`.
+`data/<dataset>` where `<datasets> = {'mit-states', 'ut-zappos'}`.
 
 
 

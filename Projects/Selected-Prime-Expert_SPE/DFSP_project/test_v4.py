@@ -634,48 +634,57 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     return final_predictions
 
 
-def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, targets,targets_pairs,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,weight_ep1,weight_ep2,weight_ep3, n_bins=10):
-
-
-    uce_expert1, bin_uncertainties_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_uce_list_ep1[0],val_uce_list_ep1[1],val_uce_list_ep1[2],val_uce_list_ep1[3],val_uce_list_ep1[4],val_uce_list_ep1[5]
-    uce_expert2, bin_uncertainties_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_uce_list_ep2[0],val_uce_list_ep2[1],val_uce_list_ep2[2],val_uce_list_ep2[3],val_uce_list_ep2[4],val_uce_list_ep2[5]
-    uce_expert3, bin_uncertainties_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3,bin_variances_ep3 = val_uce_list_ep3[0],val_uce_list_ep3[1],val_uce_list_ep3[2],val_uce_list_ep3[3],val_uce_list_ep3[4],val_uce_list_ep3[5]
-
-
-
-    # Compute uncertainties for both experts
+def choose_best_three_expert(probs_expert1, probs_expert2, probs_expert3, pairs, targets, targets_pairs, test_dataset, val_uce_list_ep1, val_uce_list_ep2, val_uce_list_ep3, weight_ep1, weight_ep2, weight_ep3, n_bins=10):
+    # 計算不確定性
     _, nattrs = probs_expert1.size()
-
     nattrs = torch.tensor(nattrs)
 
     uncertainties_expert1 = (1/torch.log(nattrs))*(-torch.sum(probs_expert1 * torch.log(probs_expert1 + 1e-12), dim=1))
     uncertainties_expert2 = (1/torch.log(nattrs))*(-torch.sum(probs_expert2 * torch.log(probs_expert2 + 1e-12), dim=1))
     uncertainties_expert3 = (1/torch.log(nattrs))*(-torch.sum(probs_expert3 * torch.log(probs_expert3 + 1e-12), dim=1))
 
-    # Find error rates for both experts
-    error_rates_expert1 = find_error_rates(uncertainties_expert1, bin_uncertainties_expert1, bin_errors_expert1)
-    error_rates_expert2 = find_error_rates(uncertainties_expert2, bin_uncertainties_expert2, bin_errors_expert2)
-    error_rates_expert3 = find_error_rates(uncertainties_expert3, bin_uncertainties_expert3, bin_errors_expert3)
-    # Choose the expert with lower error rate for each sample
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    error_rates_expert3 = (error_rates_expert3/weight_ep3)
+    # 計算每個專家的錯誤率
+    error_rates_expert1 = find_error_rates(uncertainties_expert1, val_uce_list_ep1[1], val_uce_list_ep1[2])
+    error_rates_expert2 = find_error_rates(uncertainties_expert2, val_uce_list_ep2[1], val_uce_list_ep2[2])
+    error_rates_expert3 = find_error_rates(uncertainties_expert3, val_uce_list_ep3[1], val_uce_list_ep3[2])
+
+    # 記錄選取次數
+    expert1_selected = torch.zeros_like(error_rates_expert1, dtype=torch.int)
+    expert2_selected = torch.zeros_like(error_rates_expert2, dtype=torch.int)
+    expert3_selected = torch.zeros_like(error_rates_expert3, dtype=torch.int)
+
+    # 統一權重
+    error_rates_expert1 = (error_rates_expert1 / weight_ep1)
+    error_rates_expert2 = (error_rates_expert2 / weight_ep2)
+    error_rates_expert3 = (error_rates_expert3 / weight_ep3)
+
+    # 堆疊錯誤率
+    error_rates = torch.stack([error_rates_expert1, error_rates_expert2, error_rates_expert3])
     
-    
-    # Get the predictions from both experts
+    # 找到錯誤率最小的專家
+    _, min_error_rate_indices = torch.min(error_rates, dim=0)
+
+    # 記錄選取的專家
+    expert1_selected[min_error_rate_indices == 0] = 1
+    expert2_selected[min_error_rate_indices == 1] = 1
+    expert3_selected[min_error_rate_indices == 2] = 1
+
+    # 計算選取次數
+    num_selected_expert1 = expert1_selected.sum().item()
+    num_selected_expert2 = expert2_selected.sum().item()
+    num_selected_expert3 = expert3_selected.sum().item()
+
+    print(f"專家選取次數統計：\nExpert 1 選取次數: {num_selected_expert1}\nExpert 2 選取次數: {num_selected_expert2}\nExpert 3 選取次數: {num_selected_expert3}")
+
+    # 取得各專家的預測
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
     preds_expert2 = torch.argmax(probs_expert2, dim=1)
     preds_expert3 = torch.argmax(probs_expert3, dim=1)
 
-    # 將三個錯誤率堆疊成一個張量
-    error_rates = torch.stack([error_rates_expert1, error_rates_expert2, error_rates_expert3])
-
-    # 找出最小錯誤率的索引
-    _, min_error_rate_indices = torch.min(error_rates, dim=0)
-
-    # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1, 
+    # 根據最小錯誤率的專家選擇最終預測
+    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1,
                                     torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
+
     return final_predictions
 
 #-----------------------10/25-----------------------

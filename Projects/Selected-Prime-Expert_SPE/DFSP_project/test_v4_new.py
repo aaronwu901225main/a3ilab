@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import List
 
 import csv
@@ -670,39 +670,11 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     # 將三個錯誤率堆疊成一個張量
     error_rates = torch.stack([error_rates_expert1, error_rates_expert2, error_rates_expert3])
 
-    # 初始化統計變數
-    expert_counts = Counter()  # 記錄單一專家選取次數
-    expert_combinations = Counter()  # 記錄專家組合選取次數
-    error_stats = {'E1': [], 'E2': [], 'E3': []}  # 記錄錯誤率
-
     # 找出最小錯誤率的索引
     _, min_error_rate_indices = torch.min(error_rates, dim=0)
 
-    chosen_experts_per_sample = []  # 記錄每個測試樣本的選擇專家
-
-    for i in range(len(targets)):  
-        chosen_experts = []  # 紀錄當前樣本選擇的專家
-        if error_rates_expert1[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E1')
-            error_stats['E1'].append(error_rates_expert1[i])
-        if error_rates_expert2[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E2')
-            error_stats['E2'].append(error_rates_expert2[i])
-        if error_rates_expert3[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E3')
-            error_stats['E3'].append(error_rates_expert3[i])
-
-        chosen_experts_per_sample.append(chosen_experts)
-
-        # 統計專家選取次數
-        for expert in chosen_experts:
-            expert_counts[expert] += 1
-
-        # 統計專家組合
-        expert_combinations[tuple(sorted(chosen_experts))] += 1
-
     # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1,
+    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1, 
                                     torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
     return final_predictions
 
@@ -751,6 +723,8 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     mean_value = torch.mean(std_deviation_per_position)
 #     print("mean: ",mean_value)
 #     print(std_deviation_per_position)
+    # 找出最小錯誤率的索引
+    _, min_error_rate_indices = torch.min(error_rates, dim=0)
     
     POE_probs_ = torch.stack([probs_expert1, probs_expert2,probs_expert3])
     POE_probs = product_of_experts(POE_probs_)
@@ -762,41 +736,8 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     SOE_pred = np.argmax(SOE_probs_, axis=1)
     SOE_acc_ =accuracy(SOE_pred,targets)
     # 根據最小錯誤率的索引選擇最終的預測
-    
-    # 初始化統計變數
-    expert_counts = Counter()  # 記錄單一專家選取次數
-    expert_combinations = Counter()  # 記錄專家組合選取次數
-    error_stats = {'E1': [], 'E2': [], 'E3': []}  # 記錄錯誤率
-
-    # 找出最小錯誤率的索引
-    _, min_error_rate_indices = torch.min(error_rates, dim=0)
-
-    chosen_experts_per_sample = []  # 記錄每個測試樣本的選擇專家
-
-    for i in range(len(targets)):  
-        chosen_experts = []  # 紀錄當前樣本選擇的專家
-        if error_rates_expert1[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E1')
-            error_stats['E1'].append(error_rates_expert1[i])
-        if error_rates_expert2[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E2')
-            error_stats['E2'].append(error_rates_expert2[i])
-        if error_rates_expert3[i] <= min(error_rates[:, i]):
-            chosen_experts.append('E3')
-            error_stats['E3'].append(error_rates_expert3[i])
-
-        chosen_experts_per_sample.append(chosen_experts)
-
-        # 統計專家選取次數
-        for expert in chosen_experts:
-            expert_counts[expert] += 1
-
-        # 統計專家組合
-        expert_combinations[tuple(sorted(chosen_experts))] += 1
-
-    # 根據最小錯誤率的索引選擇最終的預測
     final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1,
-                                    torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
+                                      torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
 
     initial_predictions_probs = torch.where(min_error_rate_indices.unsqueeze(-1) == 0, probs_expert1,
                                            torch.where(min_error_rate_indices.unsqueeze(-1) == 1, probs_expert2, probs_expert3))
@@ -928,17 +869,8 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         SPE_acc__ =[0,0,0,0,0,0,0,0]
 
 
-    mean_error_E1 = np.mean(error_stats['E1']) if error_stats['E1'] else 0
-    mean_error_E2 = np.mean(error_stats['E2']) if error_stats['E2'] else 0
-    mean_error_E3 = np.mean(error_stats['E3']) if error_stats['E3'] else 0
+    return SOE_final_predictions,ERV_SoP_acc,SPE_acc__
 
-    print(f"平均錯誤率 - Expert 1: {mean_error_E1:.4f}")
-    print(f"平均錯誤率 - Expert 2: {mean_error_E2:.4f}")
-    print(f"平均錯誤率 - Expert 3: {mean_error_E3:.4f}")
-    print(f"專家選取次數: {expert_counts}")
-    print(f"專家組合出現頻率: {expert_combinations}")
-
-    return SOE_final_predictions, ERV_SoP_acc, SPE_acc__, expert_counts, expert_combinations
 
 
 
@@ -976,22 +908,37 @@ import torch
 from sklearn.metrics import accuracy_score, f1_score
 
 def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, threshold=0.01):
-    error_diffs = torch.abs(error_rates - error_rates.min(dim=0)[0])
-    close_errors = error_diffs <= threshold
+    error_diffs = torch.abs(error_rates - error_rates.min(dim=0)[0])  # 與最小錯誤率的差異
+    close_errors = error_diffs <= threshold  # 判斷是否接近最小錯誤率
 
     final_probs = torch.zeros_like(probs_expert1)
+    num_samples = probs_expert1.size(0)
 
-    for i in range(probs_expert1.size(0)):
-        # Count the number of experts with close error rates
+    # 用於統計的變數
+    expert_selection_counts = defaultdict(int)  # 每個專家被選取的次數
+    selection_size_counts = defaultdict(int)  # 選取專家數量的分佈
+    error_rates_per_selection = defaultdict(list)  # 按選取情況記錄錯誤率
+    sample_expert_selections = []  # 每個樣本的選取專家
+
+    for i in range(num_samples):
+        # 計算接近最小錯誤率的專家數量
         close_error_count = close_errors[:, i].sum()
+        selected_experts = torch.where(close_errors[:, i])[0].tolist()  # 被選取的專家索引
 
-        if close_error_count == 3:  # If all three experts have close error rates
-            # Take the average of probabilities of all three experts
+        # 記錄選取情況
+        sample_expert_selections.append(selected_experts)
+        selection_size_counts[close_error_count.item()] += 1
+        for exp_idx in selected_experts:
+            expert_selection_counts[exp_idx] += 1
+        error_rates_per_selection[tuple(selected_experts)].append(error_rates[:, i].tolist())
+
+        # 根據選取情況計算最終概率
+        if close_error_count == 3:
             final_probs[i] = (probs_expert1[i] + probs_expert2[i] + probs_expert3[i]) / 3
-        elif close_error_count == 2:  # If two experts have close error rates
+        elif close_error_count == 2:
             close_experts_probs = torch.stack([probs_expert1[i], probs_expert2[i], probs_expert3[i]])[close_errors[:, i]]
             final_probs[i] = close_experts_probs.mean(dim=0)
-        else:  # Choose the probability of the expert with the minimum error rate
+        else:
             min_error_expert = torch.argmin(error_rates[:, i])
             if min_error_expert == 0:
                 final_probs[i] = probs_expert1[i]
@@ -1001,10 +948,35 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
                 final_probs[i] = probs_expert3[i]
 
     preds_preds = torch.argmax(final_probs, dim=1)
-    outlier_acc = accuracy_score(targets, preds_preds)
-    outlier_f1_score = f1_score(targets, preds_preds, average='macro')
-    print("Threshold: ", threshold, " - Outlier Accuracy: ", outlier_acc, " - F1 Score: ", outlier_f1_score)
-    return outlier_acc,outlier_f1_score
+    outlier_acc = accuracy_score(targets.cpu().numpy(), preds_preds.cpu().numpy())
+    outlier_f1_score = f1_score(targets.cpu().numpy(), preds_preds.cpu().numpy(), average='macro')
+    print(f"Threshold: {threshold} - Outlier Accuracy: {outlier_acc} - F1 Score: {outlier_f1_score}")
+
+    # 統計結果輸出
+    print("\n=== Expert Selection Statistics ===")
+    print(f"Total Samples: {num_samples}")
+    print("Expert Selection Frequency:")
+    for exp_idx in range(3):
+        count = expert_selection_counts[exp_idx]
+        print(f"Expert {exp_idx + 1}: {count} times ({count / num_samples * 100:.2f}%)")
+
+    print("\nSelection Size Distribution:")
+    for size, count in selection_size_counts.items():
+        print(f"{size} Expert(s) Selected: {count} samples ({count / num_samples * 100:.2f}%)")
+
+    print("\nAverage Error Rates by Selection:")
+    for selection, error_list in error_rates_per_selection.items():
+        avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
+        print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}")
+
+    # 保存詳細選取情況到 CSV 文件
+    with open(f'expert_selection_stats_threshold_{threshold}.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['Sample Index', 'Selected Experts', 'Error Rates (Exp1, Exp2, Exp3)'])
+        for i, (experts, errors) in enumerate(zip(sample_expert_selections, error_rates.T.tolist())):
+            writer.writerow([i, [x + 1 for x in experts], errors])
+
+    return outlier_acc, outlier_f1_score
 
 
 
@@ -1191,27 +1163,7 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     global val_acc_ep3
     global val_uce_list_ep2_att
     
-    def plot_expert_selection(expert_counts, expert_combinations):
-        plt.figure(figsize=(10, 5))
-
-        # 專家選取次數
-        plt.subplot(1, 2, 1)
-        plt.bar(expert_counts.keys(), expert_counts.values(), color=['blue', 'green', 'red'])
-        plt.xlabel("Expert")
-        plt.ylabel("Selection Count")
-        plt.title("Expert Selection Frequency")
-
-        # 專家組合次數
-        plt.subplot(1, 2, 2)
-        plt.bar(["+".join(k) for k in expert_combinations.keys()], expert_combinations.values(), color='orange')
-        plt.xlabel("Expert Combination")
-        plt.ylabel("Count")
-        plt.title("Expert Combination Frequency")
-        plt.xticks(rotation=45)
-
-        plt.tight_layout()
-        plt.show()
-
+    
     # 找到all_obj_gt中每個元素對於在pairs當中的位置
     obj_idxs = [torch.where(pairs[:, 1] == obj)[0] for obj in all_obj_gt]
     # 並將對應的位置將S_all_logits>S_logit_attr_ours
@@ -1333,19 +1285,8 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     tabel_pred_ep123 = choose_best_three_expert(S_attr_exp1,S_attr_exp2,S_attr_exp3,pairs,all_attr_gt,all_pair_gt,test_dataset,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,weight_ep1,weight_ep2,weight_ep3)
     tabel_acc_ep123 = accuracy(tabel_pred_ep123,all_attr_gt)
     
-    MOM_probs, ERV_SoP_acc, SPE_acc__, expert_counts, expert_combinations = choose_best_three_expert_new(
-        S_attr_exp1, S_attr_exp2, S_attr_exp3, all_attr_gt, val_uce_list_ep1, val_uce_list_ep2, val_uce_list_ep3, test_dataset.phase
-    )
-
-    # 將統計結果存入 stats 字典，方便後續分析
-    stats["expert_selection_counts"] = dict(expert_counts)  # 儲存每個專家被選擇的次數
-    stats["expert_combination_counts"] = {str(k): v for k, v in expert_combinations.items()}  # 儲存專家組合
-
-
-    # 印出統計結果
-    print("=== 專家選取統計 ===")
-    print(f"專家選取次數: {expert_counts}")
-    print(f"專家組合出現頻率: {expert_combinations}")#     print(SPE_acc__)
+    MOM_probs,ERV_SoP_acc,SPE_acc__ = choose_best_three_expert_new(S_attr_exp1,S_attr_exp2,S_attr_exp3,all_attr_gt,val_uce_list_ep1,val_uce_list_ep2,val_uce_list_ep3,test_dataset.phase)
+#     print(SPE_acc__)
     outlier_acc_123,outlier_f1_123, outlier_acc_12,outlier_f1_12,outlier_acc_23,outlier_f1_23,outlier_acc_13,outlier_f1_13 = SPE_acc__[0],SPE_acc__[1],SPE_acc__[2],SPE_acc__[3],SPE_acc__[4],SPE_acc__[5],SPE_acc__[6],SPE_acc__[7]
 
     
@@ -1523,8 +1464,6 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
     stats['attr_acc_ep1_cor'] = expert1_acc
     stats['attr_acc_ep2_cor'] = expert2_acc    
     stats['attr_acc_ep3_cor'] = expert3_acc
-    
-    plot_expert_selection(expert_counts, expert_combinations)
 
 
 
@@ -1728,6 +1667,7 @@ def test(
     #--------------------------------------
     stats['attr_acc'] = attr_acc
     stats['obj_acc'] = obj_acc
+
     return stats
 def cal_final_expert(logits_expert1,logits_expert2,ground_truth):
     # Create a softmax layer

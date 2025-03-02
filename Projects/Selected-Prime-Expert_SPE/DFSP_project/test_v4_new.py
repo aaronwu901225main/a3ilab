@@ -952,25 +952,27 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
     print(f"Threshold: {threshold} - Outlier Accuracy: {outlier_acc} - F1 Score: {outlier_f1_score}")
 
     # 統計結果輸出
-    print("\n=== Expert Selection Statistics ===")
-    print(f"Total Samples: {num_samples}")
-    print("Expert Selection Frequency:")
-    for exp_idx in range(3):
-        count = expert_selection_counts[exp_idx]
-        print(f"Expert {exp_idx + 1}: {count} times ({count / num_samples * 100:.2f}%)")
-
-    print("\nSelection Size Distribution:")
-    for size, count in selection_size_counts.items():
-        print(f"{size} Expert(s) Selected: {count} samples ({count / num_samples * 100:.2f}%)")
-
-    print("\nAverage Error Rates by Selection:")
-    for selection, error_list in error_rates_per_selection.items():
-        avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
-        print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}")
-
-    # 保存詳細選取情況到 CSV 文件
     save_dir = f'detail_selection/{config.dataset}/{phase}'
     os.makedirs(save_dir, exist_ok=True)  # 創建目錄（如果不存在）
+    
+    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'w') as f:
+        print("\n=== Expert Selection Statistics ===", file=f)
+        print(f"Total Samples: {num_samples}", file=f)
+        print("Expert Selection Frequency:", file=f)
+        for exp_idx in range(3):
+            count = expert_selection_counts[exp_idx]
+            print(f"Expert {exp_idx + 1}: {count} times ({count / num_samples * 100:.2f}%)", file=f)
+
+        print("\nSelection Size Distribution:", file=f)
+        for size, count in selection_size_counts.items():
+            print(f"{size} Expert(s) Selected: {count} samples ({count / num_samples * 100:.2f}%)", file=f)
+
+        print("\nAverage Error Rates by Selection:", file=f)
+        for selection, error_list in error_rates_per_selection.items():
+            avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
+            print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}", file=f)
+
+    # 保存詳細選取情況到 CSV 文件
     csv_path = f'{save_dir}/expert_selection_stats_threshold_{threshold}.csv'
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -2250,14 +2252,15 @@ if __name__ == "__main__":
 #     ipdb.set_trace()
 
     if config.dataset =='mit-states':
-        with open('mit_state.json', 'w') as fp:
+        with open('data/mit_state.json', 'w') as fp:
             json.dump(results, fp, default=handle_special_values)
 
 
         with open(result_path, 'w') as fp:
             json.dump(results, fp, default=handle_special_values)
+
     elif config.dataset =='ut-zappos':
-        with open('ut_zappos.json', 'w') as fp:
+        with open('data/ut_zappos.json', 'w') as fp:
             json.dump(results, fp, default=handle_special_values)
 
 

@@ -841,12 +841,12 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 #         threshold_list= [0.001,0.005,0.008,0.009,0.01]
     threshold_list= [0.001,0.005,0.01,0.05,0.1]
     if phase == 'val':
-        if outlier_acclist==[]:
+        if outlier_acclist == []:
             for i in threshold_list:
-                outlier_acc,_ = outlier_detection(error_rates,probs_expert1, probs_expert2, probs_expert3,targets,i)
-                outlier_acc_12,_ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets,'12',i)
-                outlier_acc_23,_ = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets,'23',i)
-                outlier_acc_13,_ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets,'13',i)
+                outlier_acc, _ = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=i)
+                outlier_acc_12, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', i)
+                outlier_acc_23, _ = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', i)
+                outlier_acc_13, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', i)
                 outlier_acclist.append(outlier_acc)
                 outlier_acclist12.append(outlier_acc_12)
                 outlier_acclist23.append(outlier_acc_23)
@@ -858,18 +858,17 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         index_of_max12 = max(enumerate(outlier_acclist12), key=lambda x: x[1])[0]
         index_of_max13 = max(enumerate(outlier_acclist13), key=lambda x: x[1])[0]
         index_of_max23 = max(enumerate(outlier_acclist23), key=lambda x: x[1])[0]
-        print(outlier_acclist,index_of_max)
-        outlier_acc_123,outlier_f1_123 = outlier_detection(error_rates,probs_expert1, probs_expert2,probs_expert3,targets,threshold_list[index_of_max])
-        outlier_acc_12,outlier_f1_12 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets,'12',threshold_list[index_of_max12])
-        outlier_acc_23,outlier_f1_23 = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets,'23',threshold_list[index_of_max23])
-        outlier_acc_13,outlier_f1_13 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets,'13',threshold_list[index_of_max13])
+        print(outlier_acclist, index_of_max)
+        outlier_acc_123, outlier_f1_123 = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max])
+        outlier_acc_12, outlier_f1_12 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', threshold_list[index_of_max12])
+        outlier_acc_23, outlier_f1_23 = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', threshold_list[index_of_max23])
+        outlier_acc_13, outlier_f1_13 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', threshold_list[index_of_max13])
 
-        SPE_acc__=[outlier_acc_123,outlier_f1_123, outlier_acc_12,outlier_f1_12,outlier_acc_23,outlier_f1_23,outlier_acc_13,outlier_f1_13]
-    else: 
-        SPE_acc__ =[0,0,0,0,0,0,0,0]
+        SPE_acc__ = [outlier_acc_123, outlier_f1_123, outlier_acc_12, outlier_f1_12, outlier_acc_23, outlier_f1_23, outlier_acc_13, outlier_f1_13]
+    else:
+        SPE_acc__ = [0, 0, 0, 0, 0, 0, 0, 0]
 
-
-    return SOE_final_predictions,ERV_SoP_acc,SPE_acc__
+    return SOE_final_predictions, ERV_SoP_acc, SPE_acc__
 
 
 

@@ -843,7 +843,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     if phase == 'val':
         if outlier_acclist == []:
             for i in threshold_list:
-                outlier_acc, _ = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=i)
+                outlier_acc, _ = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=i, phase=phase)
                 outlier_acc_12, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', i)
                 outlier_acc_23, _ = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', i)
                 outlier_acc_13, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', i)
@@ -859,7 +859,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         index_of_max13 = max(enumerate(outlier_acclist13), key=lambda x: x[1])[0]
         index_of_max23 = max(enumerate(outlier_acclist23), key=lambda x: x[1])[0]
         print(outlier_acclist, index_of_max)
-        outlier_acc_123, outlier_f1_123 = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max])
+        outlier_acc_123, outlier_f1_123 = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max], phase=phase)
         outlier_acc_12, outlier_f1_12 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', threshold_list[index_of_max12])
         outlier_acc_23, outlier_f1_23 = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', threshold_list[index_of_max23])
         outlier_acc_13, outlier_f1_13 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', threshold_list[index_of_max13])
@@ -906,7 +906,7 @@ def outlier_detection_2_experts(error_rates, probs_expert1, probs_expert2, targe
 import torch
 from sklearn.metrics import accuracy_score, f1_score
 
-def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=0.01):
+def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=0.01, phase='val'):
     error_diffs = torch.abs(error_rates - error_rates.min(dim=0)[0])  # 與最小錯誤率的差異
     close_errors = error_diffs <= threshold  # 判斷是否接近最小錯誤率
 
@@ -969,7 +969,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
         print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}")
 
     # 保存詳細選取情況到 CSV 文件
-    save_dir = f'detail_selection/{config.dataset}'
+    save_dir = f'detail_selection/{config.dataset}/{phase}'
     os.makedirs(save_dir, exist_ok=True)  # 創建目錄（如果不存在）
     csv_path = f'{save_dir}/expert_selection_stats_threshold_{threshold}.csv'
     with open(csv_path, 'w', newline='') as csvfile:

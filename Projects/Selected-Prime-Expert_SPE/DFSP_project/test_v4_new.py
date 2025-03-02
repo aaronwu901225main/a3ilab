@@ -973,7 +973,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
             print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}", file=f)
     
     with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.json', 'w') as g:
-        for line in f:
+        for line in g:
             print(line)
 
     # 保存詳細選取情況到 CSV 文件

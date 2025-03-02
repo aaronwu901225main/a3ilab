@@ -970,7 +970,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
         print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}")
 
     # 保存詳細選取情況到 CSV 文件
-    with open(f'expert_selection_stats_threshold_{threshold}.csv', 'w', newline='') as csvfile:
+    with open(f'detail_selection/{config.dataset}_expert_selection_stats_threshold_{threshold}.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Sample Index', 'Selected Experts', 'Error Rates (Exp1, Exp2, Exp3)'])
         for i, (experts, errors) in enumerate(zip(sample_expert_selections, error_rates.T.tolist())):

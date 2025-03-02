@@ -972,7 +972,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
             avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
             print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}", file=f)
     
-    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.json', 'w') as g:
+    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.json', 'r') as g:
         for line in g:
             print(line)
 

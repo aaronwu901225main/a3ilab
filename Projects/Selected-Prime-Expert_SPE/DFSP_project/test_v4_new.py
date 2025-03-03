@@ -955,7 +955,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
     save_dir = f'detail_selection/{config.dataset}/{phase}'
     os.makedirs(save_dir, exist_ok=True)  # 創建目錄（如果不存在）
 
-    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.json', 'w') as f:
+    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'w') as f:
         print("\n=== Expert Selection Statistics ===", file=f)
         print(f"Total Samples: {num_samples}", file=f)
         print("Expert Selection Frequency:", file=f)
@@ -972,7 +972,7 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
             avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
             print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}", file=f)
     
-    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.json', 'r') as g:
+    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'r') as g:
         for line in g:
             print(line)
 

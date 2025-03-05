@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import argparse
 import copy
 import json
@@ -37,7 +36,6 @@ import csv
 cudnn.benchmark = True
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
 
 class Evaluator:
     """
@@ -454,18 +452,18 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     _, nattrs = probs_expert2.size()
     nattrs = torch.tensor(nattrs)
     nattrs = torch.tensor(nattrs)
-    confidences_expert1 = (1/torch.log(nattrs))*(-torch.sum(probs_expert1 * torch.log(probs_expert1 + 1e-12), dim=1))
-    confidences_expert2 = (1/torch.log(nattrs))*(-torch.sum(probs_expert2 * torch.log(probs_expert2 + 1e-12), dim=1))
+    confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
+    confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
     # Find error rates for both experts
     error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
+    error_rates_expert1 = (error_rates_expert1*weight_ep1)
+    error_rates_expert2 = (error_rates_expert2*weight_ep2)
     
     
-    chosen_expert = (error_rates_expert1 < error_rates_expert2)
+    chosen_expert = (error_rates_expert1 > error_rates_expert2)
 
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
@@ -478,45 +476,32 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
 
 def find_error_rates(confidences, bin_confidences, bin_errors):
     error_rates = []
-    for uncertainty in confidences:
+    # 確保 bin_confidences 按升序排列，並過濾掉 None 值
+    valid_bins = [(b, e) for b, e in zip(bin_confidences, bin_errors) if b is not None]
+    if not valid_bins:
+        return torch.tensor([0.5] * len(confidences))  # 預設錯誤率
+    bin_confidences, bin_errors = zip(*sorted(valid_bins))
+    
+    for confidence in confidences:
         found = False
-        for idx, (bin_uncertainty_lower, bin_uncertainty_upper, bin_error) in enumerate(zip(bin_confidences[:-1], bin_confidences[1:], bin_errors)):
-            if bin_uncertainty_lower is not None and bin_uncertainty_upper is not None and bin_error is not None:
-                if bin_uncertainty_lower <= uncertainty.item() < bin_uncertainty_upper:
-
-                    error_rates.append(bin_error)
-                    found = True
-                    break
+        # 從高信心度到低信心度檢查
+        for idx in range(len(bin_confidences)-1, -1, -1):
+            if idx == len(bin_confidences)-1 and confidence >= bin_confidences[idx]:
+                error_rates.append(bin_errors[idx])
+                found = True
+                break
+            elif idx == 0 and confidence < bin_confidences[idx+1]:
+                error_rates.append(bin_errors[idx])
+                found = True
+                break
+            elif bin_confidences[idx] <= confidence < bin_confidences[idx+1]:
+                error_rates.append(bin_errors[idx])
+                found = True
+                break
         if not found:
-            found_= False
-            if bin_confidences[0] is not None: 
-                if 0 <=uncertainty< bin_confidences[0]:
-                    error_rates.append(bin_errors[0])
-                    found_= True
-                else:    
-                    for bin_error in reversed(bin_errors):
-                        if bin_error is not None:
-                            error_rates.append(bin_error)
-                            found_= True
-                            break
-            else:
-                if bin_confidences[1] is not None: 
-                    error_rates.append(bin_errors[1])
-                    found_= True
-                else:
-                    error_rates.append(bin_errors[2])
-                    found_= True
-                    
-            if not found_:
-                if bin_confidences[4] is not None and 0 <=uncertainty< bin_confidences[4]: 
-                    error_rates.append(bin_errors[4])
-                    found_= True
-            if not found_:
-                if bin_confidences[8] is not None and bin_confidences[8] <=uncertainty< 1: 
-                    error_rates.append(bin_errors[8])
-                    found_= True
-                
-
+            # 若未找到匹配分區，使用最低信心度的錯誤率作為預設
+            error_rates.append(bin_errors[0] if confidence < bin_confidences[0] else bin_errors[-1])
+    
     return torch.tensor(error_rates)
 
 def accuracy(y_true, y_pred):
@@ -541,17 +526,17 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     # Compute confidences for both experts
     _, nattrs = probs_expert1.size()
     nattrs = torch.tensor(nattrs)
-    confidences_expert1 = (1/torch.log(nattrs))*(-torch.sum(probs_expert1 * torch.log(probs_expert1 + 1e-12), dim=1))
-    confidences_expert2 = (1/torch.log(nattrs))*(-torch.sum(probs_expert2 * torch.log(probs_expert2 + 1e-12), dim=1))
+    confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
+    confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
     # Find error rates for both experts
     error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
+    error_rates_expert1 = (error_rates_expert1*weight_ep1)
+    error_rates_expert2 = (error_rates_expert2*weight_ep2)
     
-    chosen_expert = (error_rates_expert1 < error_rates_expert2)
+    chosen_expert = (error_rates_expert1 > error_rates_expert2)
 
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
@@ -576,18 +561,18 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
 
     nattrs = torch.tensor(nattrs)
 
-    confidences_expert1 = (1/torch.log(nattrs))*(-torch.sum(probs_expert1 * torch.log(probs_expert1 + 1e-12), dim=1))
-    confidences_expert2 = (1/torch.log(nattrs))*(-torch.sum(probs_expert2 * torch.log(probs_expert2 + 1e-12), dim=1))
-    confidences_expert3 = (1/torch.log(nattrs))*(-torch.sum(probs_expert3 * torch.log(probs_expert3 + 1e-12), dim=1))
+    confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
+    confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
+    confidences_expert3 = torch.max(probs_expert3, dim=1)[0]
 
     # Find error rates for both experts
     error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     error_rates_expert3 = find_error_rates(confidences_expert3, bin_confidences_expert3, bin_errors_expert3)
     # Choose the expert with lower error rate for each sample
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    error_rates_expert3 = (error_rates_expert3/weight_ep3)
+    error_rates_expert1 = (error_rates_expert1*weight_ep1)
+    error_rates_expert2 = (error_rates_expert2*weight_ep2)
+    error_rates_expert3 = (error_rates_expert3*weight_ep3)
     
     
     # Get the predictions from both experts
@@ -629,9 +614,9 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     # Compute confidences for both experts
     _, nattrs = probs_expert1.size()
     nattrs = torch.tensor(nattrs)
-    confidences_expert1 = (1/torch.log(nattrs))*(-torch.sum(probs_expert1 * torch.log(probs_expert1 + 1e-12), dim=1))
-    confidences_expert2 = (1/torch.log(nattrs))*(-torch.sum(probs_expert2 * torch.log(probs_expert2 + 1e-12), dim=1))
-    confidences_expert3 = (1/torch.log(nattrs))*(-torch.sum(probs_expert3 * torch.log(probs_expert3 + 1e-12), dim=1))
+    confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
+    confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
+    confidences_expert3 = torch.max(probs_expert3, dim=1)[0]
 
     # Find error rates for both experts
     error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
@@ -934,8 +919,7 @@ def calculate_weighted_multiclass_fdr_for(predictions, ground_truth):
 
     return np.sum(FDR) / np.sum(weights), np.sum(FOR) / np.sum(weights)
 
-# ## 6/4新增加權投票
-
+# 加權投票
 def voting(preds_expert1: List[int], preds_expert2: List[int], preds_expert3: List[int], default_expert: int) -> torch.Tensor:
     assert default_expert in [1, 2, 3], "Default expert must be either 1, 2, or 3"
     

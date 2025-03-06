@@ -462,7 +462,6 @@ def compute_ece(probs, targets, n_bins=10):
 
     return ece, bin_confidences, bin_accuracies, prop_in_bin_values, bin_n_samples, bin_variances
 
-### 5/1新增
 def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs ,test_dataset,val_ece_list_ep1,val_ece_list_ep2,weight_ep1,weight_ep2,n_bins=10):
 
 
@@ -882,7 +881,7 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
     save_dir = f'detail_selection/{config.dataset}/{phase}'
     os.makedirs(save_dir, exist_ok=True)  # 創建目錄（如果不存在）
 
-    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'w') as f:
+    with open(f'{save_dir}/expert_selection_confidence_stats_threshold_{threshold}.txt', 'w') as f:
         print("\n=== Expert Selection Statistics ===", file=f)
         print(f"Total Samples: {num_samples}", file=f)
         print("Expert Selection Frequency:", file=f)
@@ -899,12 +898,12 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
             avg_accuracies = torch.tensor(accuracie_list).mean(dim=0).tolist()
             print(f"Selection {tuple(x + 1 for x in selection)}: Avg Accuracie Rates = {avg_accuracies}", file=f)
     
-    with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'r') as g:
+    with open(f'{save_dir}/expert_selection_confidence_stats_threshold_{threshold}.txt', 'r') as g:
         for line in g:
             print(line)
 
     # 保存詳細選取情況到 CSV 文件
-    csv_path = f'{save_dir}/expert_selection_stats_threshold_{threshold}.csv'
+    csv_path = f'{save_dir}/expert_selection_confidence_stats_threshold_{threshold}.csv'
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Sample Index', 'Selected Experts', 'Accuracie Rates (Exp1, Exp2, Exp3)'])

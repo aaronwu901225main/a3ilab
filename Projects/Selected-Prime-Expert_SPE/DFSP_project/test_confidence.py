@@ -894,10 +894,10 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
         for size, count in selection_size_counts.items():
             print(f"{size} Expert(s) Selected: {count} samples ({count / num_samples * 100:.2f}%)", file=f)
 
-        print("\nAverage Error Rates by Selection:", file=f)
+        print("\nAverage Accuracie Rates by Selection:", file=f)
         for selection, accuracie_list in accuracie_rates_per_selection.items():
             avg_accuracies = torch.tensor(accuracie_list).mean(dim=0).tolist()
-            print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_accuracies}", file=f)
+            print(f"Selection {tuple(x + 1 for x in selection)}: Avg Accuracie Rates = {avg_accuracies}", file=f)
     
     with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'r') as g:
         for line in g:
@@ -907,7 +907,7 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
     csv_path = f'{save_dir}/expert_selection_stats_threshold_{threshold}.csv'
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['Sample Index', 'Selected Experts', 'Error Rates (Exp1, Exp2, Exp3)'])
+        writer.writerow(['Sample Index', 'Selected Experts', 'Accuracie Rates (Exp1, Exp2, Exp3)'])
         for i, (experts, accuracies) in enumerate(zip(sample_expert_selections, accuracie_rates.T.tolist())):
             writer.writerow([i, [x + 1 for x in experts], accuracies])
 

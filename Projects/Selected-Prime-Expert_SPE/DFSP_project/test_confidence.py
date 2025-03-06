@@ -459,8 +459,8 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1*weight_ep1)
-    error_rates_expert2 = (error_rates_expert2*weight_ep2)
+    error_rates_expert1 = (error_rates_expert1/weight_ep1)
+    error_rates_expert2 = (error_rates_expert2/weight_ep2)
     
     
     chosen_expert = (error_rates_expert1 > error_rates_expert2)
@@ -533,8 +533,8 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     # Choose the expert with lower error rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1*weight_ep1)
-    error_rates_expert2 = (error_rates_expert2*weight_ep2)
+    error_rates_expert1 = (error_rates_expert1/weight_ep1)
+    error_rates_expert2 = (error_rates_expert2/weight_ep2)
     
     chosen_expert = (error_rates_expert1 > error_rates_expert2)
 
@@ -570,9 +570,9 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
     error_rates_expert3 = find_error_rates(confidences_expert3, bin_confidences_expert3, bin_errors_expert3)
     # Choose the expert with lower error rate for each sample
-    error_rates_expert1 = (error_rates_expert1*weight_ep1)
-    error_rates_expert2 = (error_rates_expert2*weight_ep2)
-    error_rates_expert3 = (error_rates_expert3*weight_ep3)
+    error_rates_expert1 = (error_rates_expert1/weight_ep1)
+    error_rates_expert2 = (error_rates_expert2/weight_ep2)
+    error_rates_expert3 = (error_rates_expert3/weight_ep3)
     
     
     # Get the predictions from both experts

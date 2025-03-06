@@ -2176,7 +2176,7 @@ if __name__ == "__main__":
 #     ipdb.set_trace()
 
     if config.dataset =='mit-states':
-        with open('data/mit_state.json', 'w') as fp:
+        with open('data/mit_state_confidence.json', 'w') as fp:
             json.dump(results, fp, default=handle_special_values)
 
 
@@ -2184,7 +2184,7 @@ if __name__ == "__main__":
             json.dump(results, fp, default=handle_special_values)
 
     elif config.dataset =='ut-zappos':
-        with open('data/ut_zappos.json', 'w') as fp:
+        with open('data/ut_zappos_confidence.json', 'w') as fp:
             json.dump(results, fp, default=handle_special_values)
 
 

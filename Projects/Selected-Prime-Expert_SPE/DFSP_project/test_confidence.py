@@ -419,10 +419,16 @@ def compute_ece(probs, targets, n_bins=10):
     ece = 0
     bin_confidences = []
     bin_accuracies = []
+    prop_in_bin_values = []
+    bin_n_samples = []
+    bin_variances = []
     confidences, _ = torch.max(probs, dim=1)  # Compute the confidence values
+    
     for bin_lower, bin_upper in zip(bin_lowers, bin_uppers):
         in_bin = (confidences >= bin_lower) * (confidences < bin_upper)
         prop_in_bin = in_bin.float().mean()
+        prop_in_bin_values.append(prop_in_bin.item())
+        
         if prop_in_bin.item() > 0:
             sample_indices = torch.where(in_bin)[0]
             bin_targets = targets[sample_indices]
@@ -430,13 +436,18 @@ def compute_ece(probs, targets, n_bins=10):
             true_prob_in_bin = (bin_targets == torch.argmax(bin_probs, dim=1)).float().mean()
             avg_confidence_in_bin = confidences[in_bin].mean()
             ece += torch.abs(avg_confidence_in_bin - true_prob_in_bin) * prop_in_bin
+            
             bin_confidences.append(avg_confidence_in_bin.item())
             bin_accuracies.append(true_prob_in_bin.item())
+            bin_n_samples.append(len(sample_indices))
+            bin_variances.append(confidences[in_bin].var().item() if len(sample_indices) > 1 else 0.0)
         else:
             bin_confidences.append(None)
             bin_accuracies.append(None)
+            bin_n_samples.append(0)
+            bin_variances.append(0.0)
 
-    return ece, bin_confidences, bin_accuracies
+    return ece, bin_confidences, bin_accuracies, prop_in_bin_values, bin_n_samples, bin_variances
 
 ### 5/1新增
 def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs ,test_dataset,val_ece_list_ep1,val_ece_list_ep2,weight_ep1,weight_ep2,n_bins=10):

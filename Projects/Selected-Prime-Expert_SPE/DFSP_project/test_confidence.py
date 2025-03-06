@@ -423,7 +423,7 @@ def plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, mod
         plt.annotate("n={}".format(txt), (valid_bin_confidences[i], valid_bin_accuracies[i]), fontsize=8, ha='center', va='bottom', textcoords="offset points", xytext=(0,5))
         plt.annotate("var={:.2f}".format(valid_bin_variances[i]), (valid_bin_confidences[i], valid_bin_accuracies[i]), fontsize=8, ha='center', va='bottom', textcoords="offset points", xytext=(0,20))
     Path(config.save_path + '/plt/'+str(len(test_dataset.pairs))).mkdir(parents=True, exist_ok=True)
-    plt.savefig(config.save_path + '/plt/'+str(len(test_dataset.pairs))+'/'+test_dataset.phase+'_'+"UCE_model_{}.png".format(model_index + 1))
+    plt.savefig(config.save_path + '/plt/'+str(len(test_dataset.pairs))+'/'+test_dataset.phase+'_'+"ECE_model_{}.png".format(model_index + 1))
 
 def compute_ece(probs, targets, n_bins=10):
     bin_boundaries = np.linspace(0, 1, n_bins + 1)
@@ -466,10 +466,10 @@ def compute_ece(probs, targets, n_bins=10):
 def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs ,test_dataset,val_ece_list_ep1,val_ece_list_ep2,weight_ep1,weight_ep2,n_bins=10):
 
 
-#     ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(probs_expert1, targets, n_bins)
-#     ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(probs_expert2, targets_pairs, n_bins)
-    ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
-    ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
+#     ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(probs_expert1, targets, n_bins)
+#     ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(probs_expert2, targets_pairs, n_bins)
+    ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
+    ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
 
     # Compute confidences for both experts
     _, nattrs = probs_expert1.size()
@@ -478,16 +478,16 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     nattrs = torch.tensor(nattrs)
     confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
     confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
-    # Find error rates for both experts
-    error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
-    error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
-    # Choose the expert with lower error rate for each sample
+    # Find accuracie rates for both experts
+    accuracie_rates_expert1 = find_accuracie_rates(confidences_expert1, bin_confidences_expert1, bin_accuracies_expert1)
+    accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
+    # Choose the expert with lower accuracie rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
+    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
     
     
-    chosen_expert = (error_rates_expert1 > error_rates_expert2)
+    chosen_expert = (accuracie_rates_expert1 > accuracie_rates_expert2)
 
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
@@ -498,35 +498,35 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     final_predictions = torch.where(chosen_expert, preds_expert1, preds_expert2)
     return final_predictions
 
-def find_error_rates(confidences, bin_confidences, bin_errors):
-    error_rates = []
+def find_accuracie_rates(confidences, bin_confidences, bin_accuracies):
+    accuracie_rates = []
     # 確保 bin_confidences 按升序排列，並過濾掉 None 值
-    valid_bins = [(b, e) for b, e in zip(bin_confidences, bin_errors) if b is not None]
+    valid_bins = [(b, e) for b, e in zip(bin_confidences, bin_accuracies) if b is not None]
     if not valid_bins:
         return torch.tensor([0.5] * len(confidences))  # 預設錯誤率
-    bin_confidences, bin_errors = zip(*sorted(valid_bins))
+    bin_confidences, bin_accuracies = zip(*sorted(valid_bins))
     
     for confidence in confidences:
         found = False
         # 從高信心度到低信心度檢查
         for idx in range(len(bin_confidences)-1, -1, -1):
             if idx == len(bin_confidences)-1 and confidence >= bin_confidences[idx]:
-                error_rates.append(bin_errors[idx])
+                accuracie_rates.append(bin_accuracies[idx])
                 found = True
                 break
             elif idx == 0 and confidence < bin_confidences[idx+1]:
-                error_rates.append(bin_errors[idx])
+                accuracie_rates.append(bin_accuracies[idx])
                 found = True
                 break
             elif bin_confidences[idx] <= confidence < bin_confidences[idx+1]:
-                error_rates.append(bin_errors[idx])
+                accuracie_rates.append(bin_accuracies[idx])
                 found = True
                 break
         if not found:
             # 若未找到匹配分區，使用最低信心度的錯誤率作為預設
-            error_rates.append(bin_errors[0] if confidence < bin_confidences[0] else bin_errors[-1])
+            accuracie_rates.append(bin_accuracies[0] if confidence < bin_confidences[0] else bin_accuracies[-1])
     
-    return torch.tensor(error_rates)
+    return torch.tensor(accuracie_rates)
 
 def accuracy(y_true, y_pred):
 
@@ -541,26 +541,26 @@ def accuracy(y_true, y_pred):
 def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val_ece_list_ep1,val_ece_list_ep2,weight_ep1,weight_ep2, n_bins=10):
     # Compute UCE and bin values for both experts
 
-#     ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(probs_expert1, targets, n_bins)
-#     ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(probs_expert2, targets, n_bins)
+#     ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(probs_expert1, targets, n_bins)
+#     ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(probs_expert2, targets, n_bins)
 
-    ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
-    ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
+    ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
+    ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
 
     # Compute confidences for both experts
     _, nattrs = probs_expert1.size()
     nattrs = torch.tensor(nattrs)
     confidences_expert1 = torch.max(probs_expert1, dim=1)[0]
     confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
-    # Find error rates for both experts
-    error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
-    error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
-    # Choose the expert with lower error rate for each sample
+    # Find accuracie rates for both experts
+    accuracie_rates_expert1 = find_accuracie_rates(confidences_expert1, bin_confidences_expert1, bin_accuracies_expert1)
+    accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
+    # Choose the expert with lower accuracie rate for each sample
     
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
+    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
     
-    chosen_expert = (error_rates_expert1 > error_rates_expert2)
+    chosen_expert = (accuracie_rates_expert1 > accuracie_rates_expert2)
 
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
@@ -574,9 +574,9 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
 def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, targets,targets_pairs,test_dataset,val_ece_list_ep1,val_ece_list_ep2,val_ece_list_ep3,weight_ep1,weight_ep2,weight_ep3, n_bins=10):
 
 
-    ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
-    ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
-    ece_expert3, bin_confidences_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3,bin_variances_ep3 = val_ece_list_ep3[0],val_ece_list_ep3[1],val_ece_list_ep3[2],val_ece_list_ep3[3],val_ece_list_ep3[4],val_ece_list_ep3[5]
+    ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
+    ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
+    ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3,bin_variances_ep3 = val_ece_list_ep3[0],val_ece_list_ep3[1],val_ece_list_ep3[2],val_ece_list_ep3[3],val_ece_list_ep3[4],val_ece_list_ep3[5]
 
 
 
@@ -589,14 +589,14 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
     confidences_expert3 = torch.max(probs_expert3, dim=1)[0]
 
-    # Find error rates for both experts
-    error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
-    error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
-    error_rates_expert3 = find_error_rates(confidences_expert3, bin_confidences_expert3, bin_errors_expert3)
-    # Choose the expert with lower error rate for each sample
-    error_rates_expert1 = (error_rates_expert1/weight_ep1)
-    error_rates_expert2 = (error_rates_expert2/weight_ep2)
-    error_rates_expert3 = (error_rates_expert3/weight_ep3)
+    # Find accuracie rates for both experts
+    accuracie_rates_expert1 = find_accuracie_rates(confidences_expert1, bin_confidences_expert1, bin_accuracies_expert1)
+    accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
+    accuracie_rates_expert3 = find_accuracie_rates(confidences_expert3, bin_confidences_expert3, bin_accuracies_expert3)
+    # Choose the expert with lower accuracie rate for each sample
+    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
+    accuracie_rates_expert3 = (accuracie_rates_expert3/weight_ep3)
     
     
     # Get the predictions from both experts
@@ -605,33 +605,33 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     preds_expert3 = torch.argmax(probs_expert3, dim=1)
 
     # 將三個錯誤率堆疊成一個張量
-    error_rates = torch.stack([error_rates_expert1, error_rates_expert2, error_rates_expert3])
+    accuracie_rates = torch.stack([accuracie_rates_expert1, accuracie_rates_expert2, accuracie_rates_expert3])
 
     # 找出最小錯誤率的索引
-    _, min_error_rate_indices = torch.min(error_rates, dim=0)
+    _, min_accuracie_rate_indices = torch.min(accuracie_rates, dim=0)
 
     # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1, 
-                                    torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
+    final_predictions = torch.where(min_accuracie_rate_indices == 0, preds_expert1, 
+                                    torch.where(min_accuracie_rate_indices == 1, preds_expert2, preds_expert3))
     return final_predictions
 
 #-----------------------10/25-----------------------
 std_deviation_per_position = None
-error_rates = None
+accuracie_rates = None
 POE_pred = None
 final_predictions = None
 def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targets,val_ece_list_ep1,val_ece_list_ep2,val_ece_list_ep3,phase, n_bins=10):
     global std_deviation_per_position
-    global error_rates
+    global accuracie_rates
     global threshold_
     global POE_pred
     global final_predictions
     global global_thresholds
     global outlier_acclist,outlier_acclist12,outlier_acclist23,outlier_acclist13
 #     global global_a
-    ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
-    ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
-    ece_expert3, bin_confidences_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3,bin_variances_ep3 = val_ece_list_ep3[0],val_ece_list_ep3[1],val_ece_list_ep3[2],val_ece_list_ep3[3],val_ece_list_ep3[4],val_ece_list_ep3[5]
+    ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1,bin_variances_ep1 = val_ece_list_ep1[0],val_ece_list_ep1[1],val_ece_list_ep1[2],val_ece_list_ep1[3],val_ece_list_ep1[4],val_ece_list_ep1[5]
+    ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2,bin_variances_ep2 = val_ece_list_ep2[0],val_ece_list_ep2[1],val_ece_list_ep2[2],val_ece_list_ep2[3],val_ece_list_ep2[4],val_ece_list_ep2[5]
+    ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3,bin_variances_ep3 = val_ece_list_ep3[0],val_ece_list_ep3[1],val_ece_list_ep3[2],val_ece_list_ep3[3],val_ece_list_ep3[4],val_ece_list_ep3[5]
 
 
 
@@ -642,11 +642,11 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     confidences_expert2 = torch.max(probs_expert2, dim=1)[0]
     confidences_expert3 = torch.max(probs_expert3, dim=1)[0]
 
-    # Find error rates for both experts
-    error_rates_expert1 = find_error_rates(confidences_expert1, bin_confidences_expert1, bin_errors_expert1)
-    error_rates_expert2 = find_error_rates(confidences_expert2, bin_confidences_expert2, bin_errors_expert2)
-    error_rates_expert3 = find_error_rates(confidences_expert3, bin_confidences_expert3, bin_errors_expert3)
-    # Choose the expert with lower error rate for each sample
+    # Find accuracie rates for both experts
+    accuracie_rates_expert1 = find_accuracie_rates(confidences_expert1, bin_confidences_expert1, bin_accuracies_expert1)
+    accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
+    accuracie_rates_expert3 = find_accuracie_rates(confidences_expert3, bin_confidences_expert3, bin_accuracies_expert3)
+    # Choose the expert with lower accuracie rate for each sample
 
     # Get the predictions from both experts
     preds_expert1 = torch.argmax(probs_expert1, dim=1)
@@ -654,14 +654,14 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     preds_expert3 = torch.argmax(probs_expert3, dim=1)
 
     # 將三個錯誤率堆疊成一個張量
-    error_rates = torch.stack([error_rates_expert1, error_rates_expert2, error_rates_expert3])
+    accuracie_rates = torch.stack([accuracie_rates_expert1, accuracie_rates_expert2, accuracie_rates_expert3])
     
-    std_deviation_per_position = torch.std(error_rates, dim=0)
+    std_deviation_per_position = torch.std(accuracie_rates, dim=0)
     mean_value = torch.mean(std_deviation_per_position)
 #     print("mean: ",mean_value)
 #     print(std_deviation_per_position)
     # 找出最小錯誤率的索引
-    _, min_error_rate_indices = torch.min(error_rates, dim=0)
+    _, min_accuracie_rate_indices = torch.min(accuracie_rates, dim=0)
     
     POE_probs_ = torch.stack([probs_expert1, probs_expert2,probs_expert3])
     POE_probs = product_of_experts(POE_probs_)
@@ -673,11 +673,11 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     SOE_pred = np.argmax(SOE_probs_, axis=1)
     SOE_acc_ =accuracy(SOE_pred,targets)
     # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_error_rate_indices == 0, preds_expert1,
-                                      torch.where(min_error_rate_indices == 1, preds_expert2, preds_expert3))
+    final_predictions = torch.where(min_accuracie_rate_indices == 0, preds_expert1,
+                                      torch.where(min_accuracie_rate_indices == 1, preds_expert2, preds_expert3))
 
-    initial_predictions_probs = torch.where(min_error_rate_indices.unsqueeze(-1) == 0, probs_expert1,
-                                           torch.where(min_error_rate_indices.unsqueeze(-1) == 1, probs_expert2, probs_expert3))
+    initial_predictions_probs = torch.where(min_accuracie_rate_indices.unsqueeze(-1) == 0, probs_expert1,
+                                           torch.where(min_accuracie_rate_indices.unsqueeze(-1) == 1, probs_expert2, probs_expert3))
     
     POE_probs_ = torch.stack([POE_probs,SOE_probs_,initial_predictions_probs])
     POE_initial_predictions_probs = product_of_experts(POE_probs_)
@@ -695,7 +695,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 
 
 
-    def cal_std_acc(error_rates, SOE_pred, final_predictions, targets):
+    def cal_std_acc(accuracie_rates, SOE_pred, final_predictions, targets):
         global global_a
         # 计算SOE_pred和final_predictions的准确度
         SOE_acc = accuracy(SOE_pred, targets)
@@ -709,7 +709,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 
         for a in a_values:
             # 1. 计算每个样本的方差
-            variances_per_sample = torch.var(error_rates, dim=0)
+            variances_per_sample = torch.var(accuracie_rates, dim=0)
 
             # 2. 计算第25百分位数，并使用a来控制这个值
             threshold_value = torch.quantile(variances_per_sample, a) 
@@ -730,11 +730,11 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 
 
 
-    def evaluate_with_thresholds(error_rates, SOE_pred, final_predictions, targets, global_a):
+    def evaluate_with_thresholds(accuracie_rates, SOE_pred, final_predictions, targets, global_a):
 
         # Compute accuracy based on a given a_value
         def compute_acc_with_a(a_value):
-            variances_per_sample = torch.var(error_rates, dim=0)
+            variances_per_sample = torch.var(accuracie_rates, dim=0)
             threshold_value = torch.quantile(variances_per_sample, a_value)
             mask = variances_per_sample > threshold_value
             chosen_predictions = torch.where(mask, final_predictions, SOE_pred)
@@ -762,13 +762,13 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         global global_a
         print('------------------global_a------val---------')
         print(global_a)
-        cal_std_acc(error_rates, SOE_pred, final_predictions, targets)
+        cal_std_acc(accuracie_rates, SOE_pred, final_predictions, targets)
         ERV_SoP_acc = 0.0
 #         import ipdb 
 #         ipdb.set_trace()
     else:
-        ERV_SoP_acc = evaluate_with_thresholds(error_rates, SOE_pred, final_predictions, targets, global_a)
-        cal_std_acc(error_rates, SOE_pred, final_predictions, targets)
+        ERV_SoP_acc = evaluate_with_thresholds(accuracie_rates, SOE_pred, final_predictions, targets, global_a)
+        cal_std_acc(accuracie_rates, SOE_pred, final_predictions, targets)
 
 #     print('global_a:', global_a)
     if ERV_SoP_acc == []:
@@ -780,10 +780,10 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     if phase == 'val':
         if outlier_acclist == []:
             for i in threshold_list:
-                outlier_acc, _ = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=i, phase=phase)
-                outlier_acc_12, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', i)
-                outlier_acc_23, _ = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', i)
-                outlier_acc_13, _ = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', i)
+                outlier_acc, _ = outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=i, phase=phase)
+                outlier_acc_12, _ = outlier_detection_2_experts(torch.stack([accuracie_rates_expert1, accuracie_rates_expert2]), probs_expert1, probs_expert2, targets, '12', i)
+                outlier_acc_23, _ = outlier_detection_2_experts(torch.stack([accuracie_rates_expert2, accuracie_rates_expert3]), probs_expert2, probs_expert3, targets, '23', i)
+                outlier_acc_13, _ = outlier_detection_2_experts(torch.stack([accuracie_rates_expert1, accuracie_rates_expert3]), probs_expert1, probs_expert3, targets, '13', i)
                 outlier_acclist.append(outlier_acc)
                 outlier_acclist12.append(outlier_acc_12)
                 outlier_acclist23.append(outlier_acc_23)
@@ -796,10 +796,10 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         index_of_max13 = max(enumerate(outlier_acclist13), key=lambda x: x[1])[0]
         index_of_max23 = max(enumerate(outlier_acclist23), key=lambda x: x[1])[0]
         print(outlier_acclist, index_of_max)
-        outlier_acc_123, outlier_f1_123 = outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max], phase=phase)
-        outlier_acc_12, outlier_f1_12 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert2]), probs_expert1, probs_expert2, targets, '12', threshold_list[index_of_max12])
-        outlier_acc_23, outlier_f1_23 = outlier_detection_2_experts(torch.stack([error_rates_expert2, error_rates_expert3]), probs_expert2, probs_expert3, targets, '23', threshold_list[index_of_max23])
-        outlier_acc_13, outlier_f1_13 = outlier_detection_2_experts(torch.stack([error_rates_expert1, error_rates_expert3]), probs_expert1, probs_expert3, targets, '13', threshold_list[index_of_max13])
+        outlier_acc_123, outlier_f1_123 = outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max], phase=phase)
+        outlier_acc_12, outlier_f1_12 = outlier_detection_2_experts(torch.stack([accuracie_rates_expert1, accuracie_rates_expert2]), probs_expert1, probs_expert2, targets, '12', threshold_list[index_of_max12])
+        outlier_acc_23, outlier_f1_23 = outlier_detection_2_experts(torch.stack([accuracie_rates_expert2, accuracie_rates_expert3]), probs_expert2, probs_expert3, targets, '23', threshold_list[index_of_max23])
+        outlier_acc_13, outlier_f1_13 = outlier_detection_2_experts(torch.stack([accuracie_rates_expert1, accuracie_rates_expert3]), probs_expert1, probs_expert3, targets, '13', threshold_list[index_of_max13])
 
         SPE_acc__ = [outlier_acc_123, outlier_f1_123, outlier_acc_12, outlier_f1_12, outlier_acc_23, outlier_f1_23, outlier_acc_13, outlier_f1_13]
     else:
@@ -807,22 +807,22 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 
     return SOE_final_predictions, ERV_SoP_acc, SPE_acc__
 
-def outlier_detection_2_experts(error_rates, probs_expert1, probs_expert2, targets, expert ,threshold=0.01):
-    error_diffs = torch.abs(error_rates - error_rates.min(dim=0)[0])
-    close_errors = error_diffs <= threshold
+def outlier_detection_2_experts(accuracie_rates, probs_expert1, probs_expert2, targets, expert ,threshold=0.01):
+    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.min(dim=0)[0])
+    close_accuracies = accuracie_diffs <= threshold
 
     final_probs = torch.zeros_like(probs_expert1)
 
     for i in range(probs_expert1.size(0)):
-        # Count the number of experts with close error rates
-        close_error_count = close_errors[:, i].sum()
+        # Count the number of experts with close accuracie rates
+        close_accuracie_count = close_accuracies[:, i].sum()
 
-        if close_error_count == 2:  # If both experts have close error rates
+        if close_accuracie_count == 2:  # If both experts have close accuracie rates
             # Take the average of probabilities of both experts
             final_probs[i] = (probs_expert1[i] + probs_expert2[i]) / 2
-        else:  # Choose the probability of the expert with the minimum error rate
-            min_error_expert = torch.argmin(error_rates[:, i])
-            if min_error_expert == 0:
+        else:  # Choose the probability of the expert with the minimum accuracie rate
+            min_accuracie_expert = torch.argmin(accuracie_rates[:, i])
+            if min_accuracie_expert == 0:
                 final_probs[i] = probs_expert1[i]
             else:
                 final_probs[i] = probs_expert2[i]
@@ -833,9 +833,9 @@ def outlier_detection_2_experts(error_rates, probs_expert1, probs_expert2, targe
     print(expert+ "  Threshold: ", threshold, " - Outlier Accuracy: ", outlier_acc, " - F1 Score: ", outlier_f1_score)
     return outlier_acc ,outlier_f1_score
 
-def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=0.01, phase='val'):
-    error_diffs = torch.abs(error_rates - error_rates.min(dim=0)[0])  # 與最小錯誤率的差異
-    close_errors = error_diffs <= threshold  # 判斷是否接近最小錯誤率
+def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=0.01, phase='val'):
+    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.min(dim=0)[0])  # 與最小錯誤率的差異
+    close_accuracies = accuracie_diffs <= threshold  # 判斷是否接近最小錯誤率
 
     final_probs = torch.zeros_like(probs_expert1)
     num_samples = probs_expert1.size(0)
@@ -843,32 +843,32 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
     # 用於統計的變數
     expert_selection_counts = defaultdict(int)  # 每個專家被選取的次數
     selection_size_counts = defaultdict(int)  # 選取專家數量的分佈
-    error_rates_per_selection = defaultdict(list)  # 按選取情況記錄錯誤率
+    accuracie_rates_per_selection = defaultdict(list)  # 按選取情況記錄錯誤率
     sample_expert_selections = []  # 每個樣本的選取專家
 
     for i in range(num_samples):
         # 計算接近最小錯誤率的專家數量
-        close_error_count = close_errors[:, i].sum()
-        selected_experts = torch.where(close_errors[:, i])[0].tolist()  # 被選取的專家索引
+        close_accuracie_count = close_accuracies[:, i].sum()
+        selected_experts = torch.where(close_accuracies[:, i])[0].tolist()  # 被選取的專家索引
 
         # 記錄選取情況
         sample_expert_selections.append(selected_experts)
-        selection_size_counts[close_error_count.item()] += 1
+        selection_size_counts[close_accuracie_count.item()] += 1
         for exp_idx in selected_experts:
             expert_selection_counts[exp_idx] += 1
-        error_rates_per_selection[tuple(selected_experts)].append(error_rates[:, i].tolist())
+        accuracie_rates_per_selection[tuple(selected_experts)].append(accuracie_rates[:, i].tolist())
 
         # 根據選取情況計算最終概率
-        if close_error_count == 3:
+        if close_accuracie_count == 3:
             final_probs[i] = (probs_expert1[i] + probs_expert2[i] + probs_expert3[i]) / 3
-        elif close_error_count == 2:
-            close_experts_probs = torch.stack([probs_expert1[i], probs_expert2[i], probs_expert3[i]])[close_errors[:, i]]
+        elif close_accuracie_count == 2:
+            close_experts_probs = torch.stack([probs_expert1[i], probs_expert2[i], probs_expert3[i]])[close_accuracies[:, i]]
             final_probs[i] = close_experts_probs.mean(dim=0)
         else:
-            min_error_expert = torch.argmin(error_rates[:, i])
-            if min_error_expert == 0:
+            min_accuracie_expert = torch.argmin(accuracie_rates[:, i])
+            if min_accuracie_expert == 0:
                 final_probs[i] = probs_expert1[i]
-            elif min_error_expert == 1:
+            elif min_accuracie_expert == 1:
                 final_probs[i] = probs_expert2[i]
             else:
                 final_probs[i] = probs_expert3[i]
@@ -895,9 +895,9 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
             print(f"{size} Expert(s) Selected: {count} samples ({count / num_samples * 100:.2f}%)", file=f)
 
         print("\nAverage Error Rates by Selection:", file=f)
-        for selection, error_list in error_rates_per_selection.items():
-            avg_errors = torch.tensor(error_list).mean(dim=0).tolist()
-            print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_errors}", file=f)
+        for selection, accuracie_list in accuracie_rates_per_selection.items():
+            avg_accuracies = torch.tensor(accuracie_list).mean(dim=0).tolist()
+            print(f"Selection {tuple(x + 1 for x in selection)}: Avg Error Rates = {avg_accuracies}", file=f)
     
     with open(f'{save_dir}/expert_selection_stats_threshold_{threshold}.txt', 'r') as g:
         for line in g:
@@ -908,8 +908,8 @@ def outlier_detection(error_rates, probs_expert1, probs_expert2, probs_expert3, 
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Sample Index', 'Selected Experts', 'Error Rates (Exp1, Exp2, Exp3)'])
-        for i, (experts, errors) in enumerate(zip(sample_expert_selections, error_rates.T.tolist())):
-            writer.writerow([i, [x + 1 for x in experts], errors])
+        for i, (experts, accuracies) in enumerate(zip(sample_expert_selections, accuracie_rates.T.tolist())):
+            writer.writerow([i, [x + 1 for x in experts], accuracies])
 
     return outlier_acc, outlier_f1_score
 
@@ -1129,27 +1129,27 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
         save_path____ = "./feat_seed1/"+str(config.seed)+'_'
         #save_tensors(test_dataset.phase , config.train_look_up_table , save_path____, S_attr_exp1, S_attr_exp2, S_attr_exp3, all_attr_gt)
         
-        ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
+        ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
 
         val_ece_list_ep1.append(ece_expert1)
         val_ece_list_ep1.append(bin_confidences_expert1)
-        val_ece_list_ep1.append(bin_errors_expert1)
+        val_ece_list_ep1.append(bin_accuracies_expert1)
         val_ece_list_ep1.append(prop_in_bin_values_expert1)
         val_ece_list_ep1.append(bin_n_samples_ep1)
         val_ece_list_ep1.append(bin_variances_ep1)
         
-        ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_attr_exp2, all_attr_gt)
+        ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_attr_exp2, all_attr_gt)
         val_ece_list_ep2.append(ece_expert2)
         val_ece_list_ep2.append(bin_confidences_expert2)
-        val_ece_list_ep2.append(bin_errors_expert2)
+        val_ece_list_ep2.append(bin_accuracies_expert2)
         val_ece_list_ep2.append(prop_in_bin_values_expert2)
         val_ece_list_ep2.append(bin_n_samples_ep2)
         val_ece_list_ep2.append(bin_variances_ep2)
         
-        ece_expert3, bin_confidences_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
+        ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
         val_ece_list_ep3.append(ece_expert3)
         val_ece_list_ep3.append(bin_confidences_expert3)
-        val_ece_list_ep3.append(bin_errors_expert3)
+        val_ece_list_ep3.append(bin_accuracies_expert3)
         val_ece_list_ep3.append(prop_in_bin_values_expert3)
         val_ece_list_ep3.append(bin_n_samples_ep3)
         val_ece_list_ep3.append(bin_variances_ep3)
@@ -1163,27 +1163,27 @@ def cal_all_stats(S_attr_exp1,all_logits,all_logits_org,all_attr_gt,all_pair_gt,
         val_ece_list_ep3 =[]
         
         
-        ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
+        ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
 
         val_ece_list_ep1.append(ece_expert1)
         val_ece_list_ep1.append(bin_confidences_expert1)
-        val_ece_list_ep1.append(bin_errors_expert1)
+        val_ece_list_ep1.append(bin_accuracies_expert1)
         val_ece_list_ep1.append(prop_in_bin_values_expert1)
         val_ece_list_ep1.append(bin_n_samples_ep1)
         val_ece_list_ep1.append(bin_variances_ep1)
         
-        ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_attr_exp2, all_attr_gt)
+        ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_attr_exp2, all_attr_gt)
         val_ece_list_ep2.append(ece_expert2)
         val_ece_list_ep2.append(bin_confidences_expert2)
-        val_ece_list_ep2.append(bin_errors_expert2)
+        val_ece_list_ep2.append(bin_accuracies_expert2)
         val_ece_list_ep2.append(prop_in_bin_values_expert2)
         val_ece_list_ep2.append(bin_n_samples_ep2)
         val_ece_list_ep2.append(bin_variances_ep2)
         
-        ece_expert3, bin_confidences_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
+        ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
         val_ece_list_ep3.append(ece_expert3)
         val_ece_list_ep3.append(bin_confidences_expert3)
-        val_ece_list_ep3.append(bin_errors_expert3)
+        val_ece_list_ep3.append(bin_accuracies_expert3)
         val_ece_list_ep3.append(prop_in_bin_values_expert3)
         val_ece_list_ep3.append(bin_n_samples_ep3)
         val_ece_list_ep3.append(bin_variances_ep3)
@@ -1667,19 +1667,19 @@ def test__yfs(
     S_attr_exp3 = F.softmax(attr_exp3, dim=1)
     #計算ep1 attr UCE
     ece_and_bin_values_all_logits_attr = [compute_ece(S_attr_exp1, all_attr_gt)]
-    for i, (ece_value, bin_confidences, bin_errors, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values_all_logits_attr):
-        plot_dot_reliability_diagram(ece_value, bin_confidences, bin_errors, 0, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
+    for i, (ece_value, bin_confidences, bin_accuracies, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values_all_logits_attr):
+        plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, 0, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
     ece_ep1=ece_and_bin_values_all_logits_attr[0][0]
 
     #計算ep2 pair UCE
     ece_and_bin_values = [compute_ece(S_pair_exp2, all_pair_gt)]
-    for i, (ece_value, bin_confidences, bin_errors, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values):
-        plot_dot_reliability_diagram(ece_value, bin_confidences, bin_errors, 1, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
+    for i, (ece_value, bin_confidences, bin_accuracies, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values):
+        plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, 1, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
         
     #計算ep3 attr UCE
         ece_and_bin_values = [compute_ece(S_attr_exp3, all_attr_gt)]
-        for i, (ece_value, bin_confidences, bin_errors, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values):
-            plot_dot_reliability_diagram(ece_value, bin_confidences, bin_errors, 2, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
+        for i, (ece_value, bin_confidences, bin_accuracies, prop_in_bin_values, bin_n_samples, bin_variances) in enumerate(ece_and_bin_values):
+            plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, 2, test_dataset, config, prop_in_bin_values, bin_n_samples, bin_variances)
 
     yfs = "_yfs"
     cal_all_stats(S_attr_exp1,all_logits_,all_logits_org,all_attr_gt,all_pair_gt,pairs,yfs,stats,test_dataset,config)
@@ -1812,12 +1812,12 @@ def construct_ece_table(model, train_dataset,train_dataset_CL,  config):
     global val_ece_list_ep2
     global val_ece_list_ep3
     
-    ece_expert1, bin_confidences_expert1, bin_errors_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
-    plot_dot_reliability_diagram(ece_expert1, bin_confidences_expert1, bin_errors_expert1, 0, train_dataset, config, prop_in_bin_values_expert1, bin_n_samples_ep1, bin_variances_ep1)
+    ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, prop_in_bin_values_expert1,bin_n_samples_ep1, bin_variances_ep1 = compute_ece(S_attr_exp1, all_attr_gt)
+    plot_dot_reliability_diagram(ece_expert1, bin_confidences_expert1, bin_accuracies_expert1, 0, train_dataset, config, prop_in_bin_values_expert1, bin_n_samples_ep1, bin_variances_ep1)
 
     val_ece_list_ep1.append(ece_expert1)
     val_ece_list_ep1.append(bin_confidences_expert1)
-    val_ece_list_ep1.append(bin_errors_expert1)
+    val_ece_list_ep1.append(bin_accuracies_expert1)
     val_ece_list_ep1.append(prop_in_bin_values_expert1)
     val_ece_list_ep1.append(bin_n_samples_ep1)
     val_ece_list_ep1.append(bin_variances_ep1)
@@ -1825,20 +1825,20 @@ def construct_ece_table(model, train_dataset,train_dataset_CL,  config):
     
 
     
-    ece_expert2, bin_confidences_expert2, bin_errors_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_pair_exp2, all_pair_gt_OW)
-    plot_dot_reliability_diagram(ece_expert2, bin_confidences_expert2, bin_errors_expert2, 1, train_dataset, config, prop_in_bin_values_expert2, bin_n_samples_ep2, bin_variances_ep2)
+    ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, prop_in_bin_values_expert2,bin_n_samples_ep2, bin_variances_ep2 = compute_ece(S_pair_exp2, all_pair_gt_OW)
+    plot_dot_reliability_diagram(ece_expert2, bin_confidences_expert2, bin_accuracies_expert2, 1, train_dataset, config, prop_in_bin_values_expert2, bin_n_samples_ep2, bin_variances_ep2)
     val_ece_list_ep2.append(ece_expert2)
     val_ece_list_ep2.append(bin_confidences_expert2)
-    val_ece_list_ep2.append(bin_errors_expert2)
+    val_ece_list_ep2.append(bin_accuracies_expert2)
     val_ece_list_ep2.append(prop_in_bin_values_expert2)
     val_ece_list_ep2.append(bin_n_samples_ep2)
     val_ece_list_ep2.append(bin_variances_ep2)
 
-    ece_expert3, bin_confidences_expert3, bin_errors_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
-    plot_dot_reliability_diagram(ece_expert3, bin_confidences_expert3, bin_errors_expert3, 2, train_dataset, config, prop_in_bin_values_expert3, bin_n_samples_ep3, bin_variances_ep3)
+    ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, prop_in_bin_values_expert3,bin_n_samples_ep3, bin_variances_ep3 = compute_ece(S_attr_exp3, all_attr_gt)
+    plot_dot_reliability_diagram(ece_expert3, bin_confidences_expert3, bin_accuracies_expert3, 2, train_dataset, config, prop_in_bin_values_expert3, bin_n_samples_ep3, bin_variances_ep3)
     val_ece_list_ep3.append(ece_expert3)
     val_ece_list_ep3.append(bin_confidences_expert3)
-    val_ece_list_ep3.append(bin_errors_expert3)
+    val_ece_list_ep3.append(bin_accuracies_expert3)
     val_ece_list_ep3.append(prop_in_bin_values_expert3)
     val_ece_list_ep3.append(bin_n_samples_ep3)
     val_ece_list_ep3.append(bin_variances_ep3)

@@ -394,9 +394,18 @@ def construct_all_fv_proj_idx(dataset,pairs):
         all_fv_proj_idx.append(fv_proj_idx)
     return all_fv_proj_idx
 
-def plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, model_index,test_dataset,config):
+def plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, model_index,test_dataset,config, prop_in_bin_values, bin_n_samples, bin_variances, threshold=0.005):
     plt.figure(figsize=(6, 6))
     plt.plot([0, 1], [0, 1], linestyle="--", color="gray", label="Perfect calibration")
+    
+    # 筛选prop_in_bin值大于等于threshold的点
+    valid_indices = [i for i, prop in enumerate(prop_in_bin_values) if prop is not None and prop >= threshold]
+    valid_bin_confidences = [bin_confidences[i] for i in valid_indices]
+    valid_bin_accuracies = [bin_accuracies[i] for i in valid_indices]
+    valid_prop_in_bin_values = [prop_in_bin_values[i] for i in valid_indices]
+    valid_bin_n_samples  = [bin_n_samples[i] for i in valid_indices]
+    valid_bin_variances  = [bin_variances[i] for i in valid_indices]
+
     plt.scatter(bin_confidences, bin_accuracies, marker='o', color='blue', label="Model {}".format(model_index + 1))
     plt.xlabel("Confidence", fontsize=14)
     plt.ylabel("Accuracy", fontsize=14)
@@ -409,8 +418,12 @@ def plot_dot_reliability_diagram(ece_value, bin_confidences, bin_accuracies, mod
     plt.gca().set_axisbelow(True)
     plt.legend(fontsize=12)
     plt.tight_layout()
+
+    for i, txt in enumerate(valid_bin_n_samples):
+        plt.annotate("n={}".format(txt), (valid_bin_confidences[i], valid_bin_accuracies[i]), fontsize=8, ha='center', va='bottom', textcoords="offset points", xytext=(0,5))
+        plt.annotate("var={:.2f}".format(valid_bin_variances[i]), (valid_bin_confidences[i], valid_bin_accuracies[i]), fontsize=8, ha='center', va='bottom', textcoords="offset points", xytext=(0,20))
     Path(config.save_path + '/plt/'+str(len(test_dataset.pairs))).mkdir(parents=True, exist_ok=True)
-    plt.savefig(config.save_path + '/plt/'+str(len(test_dataset.pairs))+'/'+test_dataset.phase+'_'+"dot_reliability_diagram_model_{}.png".format(model_index + 1))
+    plt.savefig(config.save_path + '/plt/'+str(len(test_dataset.pairs))+'/'+test_dataset.phase+'_'+"UCE_model_{}.png".format(model_index + 1))
 
 def compute_ece(probs, targets, n_bins=10):
     bin_boundaries = np.linspace(0, 1, n_bins + 1)

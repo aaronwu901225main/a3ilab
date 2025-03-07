@@ -482,8 +482,8 @@ def choose_best_expert(probs_expert1, probs_expert2, targets,targets_pairs,pairs
     accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
     # Choose the expert with lower accuracie rate for each sample
     
-    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
-    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
+    accuracie_rates_expert1 = (accuracie_rates_expert1*weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2*weight_ep2)
     
     
     chosen_expert = (accuracie_rates_expert1 > accuracie_rates_expert2)
@@ -556,8 +556,8 @@ def choose_best_expert_ex(probs_expert1, probs_expert2, targets,test_dataset,val
     accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
     # Choose the expert with lower accuracie rate for each sample
     
-    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
-    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
+    accuracie_rates_expert1 = (accuracie_rates_expert1*weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2*weight_ep2)
     
     chosen_expert = (accuracie_rates_expert1 > accuracie_rates_expert2)
 
@@ -593,9 +593,9 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     accuracie_rates_expert2 = find_accuracie_rates(confidences_expert2, bin_confidences_expert2, bin_accuracies_expert2)
     accuracie_rates_expert3 = find_accuracie_rates(confidences_expert3, bin_confidences_expert3, bin_accuracies_expert3)
     # Choose the expert with lower accuracie rate for each sample
-    accuracie_rates_expert1 = (accuracie_rates_expert1/weight_ep1)
-    accuracie_rates_expert2 = (accuracie_rates_expert2/weight_ep2)
-    accuracie_rates_expert3 = (accuracie_rates_expert3/weight_ep3)
+    accuracie_rates_expert1 = (accuracie_rates_expert1*weight_ep1)
+    accuracie_rates_expert2 = (accuracie_rates_expert2*weight_ep2)
+    accuracie_rates_expert3 = (accuracie_rates_expert3*weight_ep3)
     
     
     # Get the predictions from both experts

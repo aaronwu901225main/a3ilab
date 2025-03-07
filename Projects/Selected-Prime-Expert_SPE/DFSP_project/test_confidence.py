@@ -807,7 +807,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     return SOE_final_predictions, ERV_SoP_acc, SPE_acc__
 
 def outlier_detection_2_experts(accuracie_rates, probs_expert1, probs_expert2, targets, expert ,threshold=0.01):
-    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.min(dim=0)[0])
+    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.max(dim=0)[0])
     close_accuracies = accuracie_diffs <= threshold
 
     final_probs = torch.zeros_like(probs_expert1)

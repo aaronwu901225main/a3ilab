@@ -833,8 +833,8 @@ def outlier_detection_2_experts(accuracie_rates, probs_expert1, probs_expert2, t
     return outlier_acc ,outlier_f1_score
 
 def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=0.01, phase='val'):
-    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.min(dim=0)[0])  # 與最小錯誤率的差異
-    close_accuracies = accuracie_diffs <= threshold  # 判斷是否接近最小錯誤率
+    accuracie_diffs = torch.abs(accuracie_rates - accuracie_rates.max(dim=0)[0])  # 與最大正確率的差異
+    close_accuracies = accuracie_diffs <= threshold  # 判斷是否接近最大正確率
 
     final_probs = torch.zeros_like(probs_expert1)
     num_samples = probs_expert1.size(0)
@@ -842,11 +842,11 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
     # 用於統計的變數
     expert_selection_counts = defaultdict(int)  # 每個專家被選取的次數
     selection_size_counts = defaultdict(int)  # 選取專家數量的分佈
-    accuracie_rates_per_selection = defaultdict(list)  # 按選取情況記錄錯誤率
+    accuracie_rates_per_selection = defaultdict(list)  # 按選取情況記錄正確率
     sample_expert_selections = []  # 每個樣本的選取專家
 
     for i in range(num_samples):
-        # 計算接近最小錯誤率的專家數量
+        # 計算接近最大正確率的專家數量
         close_accuracie_count = close_accuracies[:, i].sum()
         selected_experts = torch.where(close_accuracies[:, i])[0].tolist()  # 被選取的專家索引
 

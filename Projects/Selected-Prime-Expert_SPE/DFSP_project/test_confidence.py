@@ -607,11 +607,11 @@ def choose_best_three_expert(probs_expert1,probs_expert2,probs_expert3,pairs, ta
     accuracie_rates = torch.stack([accuracie_rates_expert1, accuracie_rates_expert2, accuracie_rates_expert3])
 
     # 找出最小錯誤率的索引
-    _, min_accuracie_rate_indices = torch.min(accuracie_rates, dim=0)
+    _, max_accuracie_rate_indices = torch.max(accuracie_rates, dim=0)
 
     # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_accuracie_rate_indices == 0, preds_expert1, 
-                                    torch.where(min_accuracie_rate_indices == 1, preds_expert2, preds_expert3))
+    final_predictions = torch.where(max_accuracie_rate_indices == 1, preds_expert1, 
+                                    torch.where(max_accuracie_rate_indices == 0, preds_expert2, preds_expert3))
     return final_predictions
 
 #-----------------------10/25-----------------------
@@ -660,7 +660,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
 #     print("mean: ",mean_value)
 #     print(std_deviation_per_position)
     # 找出最小錯誤率的索引
-    _, min_accuracie_rate_indices = torch.min(accuracie_rates, dim=0)
+    _, max_accuracie_rate_indices = torch.max(accuracie_rates, dim=0)
     
     POE_probs_ = torch.stack([probs_expert1, probs_expert2,probs_expert3])
     POE_probs = product_of_experts(POE_probs_)
@@ -672,11 +672,11 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
     SOE_pred = np.argmax(SOE_probs_, axis=1)
     SOE_acc_ =accuracy(SOE_pred,targets)
     # 根據最小錯誤率的索引選擇最終的預測
-    final_predictions = torch.where(min_accuracie_rate_indices == 0, preds_expert1,
-                                      torch.where(min_accuracie_rate_indices == 1, preds_expert2, preds_expert3))
+    final_predictions = torch.where(max_accuracie_rate_indices == 1, preds_expert1,
+                                      torch.where(max_accuracie_rate_indices == 0, preds_expert2, preds_expert3))
 
-    initial_predictions_probs = torch.where(min_accuracie_rate_indices.unsqueeze(-1) == 0, probs_expert1,
-                                           torch.where(min_accuracie_rate_indices.unsqueeze(-1) == 1, probs_expert2, probs_expert3))
+    initial_predictions_probs = torch.where(max_accuracie_rate_indices.unsqueeze(-1) == 1, probs_expert1,
+                                           torch.where(max_accuracie_rate_indices.unsqueeze(-1) == 0, probs_expert2, probs_expert3))
     
     POE_probs_ = torch.stack([POE_probs,SOE_probs_,initial_predictions_probs])
     POE_initial_predictions_probs = product_of_experts(POE_probs_)

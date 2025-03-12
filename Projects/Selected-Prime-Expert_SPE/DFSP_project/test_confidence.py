@@ -775,7 +775,7 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         
         ### 20240206 新增
 #         threshold_list= [0.001,0.005,0.008,0.009,0.01]
-    threshold_list= np.arange(0, 1.001, 0.001)
+    threshold_list= np.arange(0, 1.01, 0.01)
     if phase == 'val':
         if outlier_acclist == []:
             for i in threshold_list:

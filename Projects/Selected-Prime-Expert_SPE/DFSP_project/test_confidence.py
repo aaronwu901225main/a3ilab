@@ -745,7 +745,9 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
             acc_list.append(acc_)
 #             print(f"Using a_value: {a_value:.2f}, ERV-SoP Accuracy: {acc:.4f}")
 
-        print("acc_list:---------------- ",acc_list)
+        print("acc_list:----------------")
+        for acc in acc_list:
+            print(acc)
 
         if acc_list == []:
             ERV_SoP_acc = 0.0

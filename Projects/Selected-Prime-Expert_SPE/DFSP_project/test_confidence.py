@@ -794,11 +794,9 @@ def choose_best_three_expert_new(probs_expert1,probs_expert2,probs_expert3 ,targ
         index_of_max12 = max(enumerate(outlier_acclist12), key=lambda x: x[1])[0]
         index_of_max13 = max(enumerate(outlier_acclist13), key=lambda x: x[1])[0]
         index_of_max23 = max(enumerate(outlier_acclist23), key=lambda x: x[1])[0]
-        
         for i in outlier_acclist:
-            print(i)
+            print(i,"\n")
         print(index_of_max)
-
         outlier_acc_123, outlier_f1_123 = outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_expert3, targets, config, threshold=threshold_list[index_of_max], phase=phase)
         outlier_acc_12, outlier_f1_12 = outlier_detection_2_experts(torch.stack([accuracie_rates_expert1, accuracie_rates_expert2]), probs_expert1, probs_expert2, targets, '12', threshold_list[index_of_max12])
         outlier_acc_23, outlier_f1_23 = outlier_detection_2_experts(torch.stack([accuracie_rates_expert2, accuracie_rates_expert3]), probs_expert2, probs_expert3, targets, '23', threshold_list[index_of_max23])

@@ -822,7 +822,7 @@ def outlier_detection_2_experts(accuracie_rates, probs_expert1, probs_expert2, t
             # Take the average of probabilities of both experts
             final_probs[i] = (probs_expert1[i] + probs_expert2[i]) / 2
         else:  # Choose the probability of the expert with the minimum accuracie rate
-            min_accuracie_expert = torch.argmin(accuracie_rates[:, i])
+            min_accuracie_expert = torch.argmax(accuracie_rates[:, i])
             if min_accuracie_expert == 0:
                 final_probs[i] = probs_expert1[i]
             else:
@@ -866,7 +866,7 @@ def outlier_detection(accuracie_rates, probs_expert1, probs_expert2, probs_exper
             close_experts_probs = torch.stack([probs_expert1[i], probs_expert2[i], probs_expert3[i]])[close_accuracies[:, i]]
             final_probs[i] = close_experts_probs.mean(dim=0)
         else:
-            min_accuracie_expert = torch.argmin(accuracie_rates[:, i])
+            min_accuracie_expert = torch.argmax(accuracie_rates[:, i])
             if min_accuracie_expert == 0:
                 final_probs[i] = probs_expert1[i]
             elif min_accuracie_expert == 1:
